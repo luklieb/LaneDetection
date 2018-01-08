@@ -57,10 +57,11 @@ void gabor(Mat &image)
  */
 void canny_blur(Mat &image)
 {
-	int lowThreshold = 50;
-	int kernel_size = 3;
+	//original: low_threshold=50, kernel_size=3: smooth, but many left out edges
+	int low_threshold = 200;
+	int kernel_size = 5;
 	blur(image, image, Size(3, 3));
-	Canny(image, image, lowThreshold, lowThreshold * 3, kernel_size);
+	Canny(image, image, low_threshold, low_threshold * 3, kernel_size);
 }
 
 /**
@@ -93,25 +94,43 @@ void sub_partition(int start, int end, int number, bool equidistant, int *coords
 	//coords[number] = end;
 }
 
+
+
 int main(int argc, char **argv)
 {
 	char *image_name = argv[1];
-	Mat image, processed;
+	Mat image, processed, bird;
 	image = imread(image_name, 1);
 	if (argc != 2 || !image.data)
 	{
 		printf(" No image data \n ");
 		return -1;
 	}
-	cvtColor(image, processed, COLOR_BGR2GRAY);
+
+	bird_view(image, bird, 0.6, 0.45, 0.55);
+	show_image("orig", image, true);
+	show_image("bird", bird, true);
+
+	const int ROI_START = 300;
+	cvtColor(bird, processed, COLOR_BGR2GRAY);
 	canny_blur(processed);
-	show_image("gray", processed, true);
+	show_image("roi", processed, true);
 	std::vector<Vec2f> lines;
-	HoughLinesCustom(processed, 10, CV_PI/180., 100, lines, 2, 0, CV_PI);
-	show_image("hough", processed, true);
+	int histo_points[2];
+	h_histogram(processed, histo_points);
+	//line(processed, Point(histo_points[0], 100), Point(histo_points[0], 100), Scalar(255), 5, CV_AA);
+	//line(processed, Point(histo_points[1], 100), Point(histo_points[1], 100), Scalar(255), 5, CV_AA);
+	//v_roi(processed, ROI_START);
+	show_image("roi", processed, true);
+	std::vector<Point> bez_points = std::vector<Point>(6);
+	window_search(processed, histo_points, 60, bez_points);
+	for (auto p : bez_points)
+		line(processed, p, p, Scalar(255), 5, CV_AA);
+
+	//HoughLinesCustom(processed, 1, CV_PI / 180., 10, lines, 2, 0);
 	for (auto p : lines)
 	{
-		std::cout << p[0] << ", " << p[1] << std::endl;
+		std::cout << p[0] << ", " << p[1] / CV_PI << std::endl;
 		float rho = p[0], theta = p[1];
 		Point pt1, pt2;
 		double a = cos(theta), b = sin(theta);
@@ -120,9 +139,9 @@ int main(int argc, char **argv)
 		pt1.y = cvRound(y0 + 1000 * (a));
 		pt2.x = cvRound(x0 - 1000 * (-b));
 		pt2.y = cvRound(y0 - 1000 * (a));
-		line(image, pt1, pt2, Scalar(255, 0, 255), 3, CV_AA);
+		line(processed, pt1, pt2, Scalar(255, 0, 255), 1, CV_AA);
 	}
-	show_image("lines", image, true);
+	show_image("lines", processed, true);
 
 	//gabor(processed);
 #ifndef NDEBUG
