@@ -74,9 +74,9 @@ struct hough_cmp_gt
  * @param rho distance resolution parameter in pixels
  * @param theta angle resolution parameter in radiants
  * @param threshold minimum number of intersections to detect a line
- * @param lines vector returning the found lines (in rho and theta)
- * @param linesMax number of lines to be found
- * @param h_roi start of the horizontal region of interest
+ * @param lines vector returning the found lines (in rho and theta), at beginning of vector all linesMax left lines, then all linesMax right lines
+ * @param linesMax number of lines to be found per side
+ * @param h_roi start of the horizontal region of interest in percent [0;1]
  * @note be aware that if the current line is similar (parrallel) to the previous line it gets ignored
  *       -> might cause problems with "bird eye view" (because then both road lines are parallel)
  */
@@ -85,7 +85,7 @@ struct hough_cmp_gt
  * add restrictions in function to restrict e.g. the angle of the second line, etc.)
  */
 void HoughLinesCustom(const Mat &img, float rho, float theta,
-                      int threshold, std::vector<Vec2f> &lines, int linesMax, int h_roi,
+                      int threshold, std::vector<Vec2f> &lines, int linesMax, int roi_start, int roi_end,
                       double min_theta, double max_theta)
 {
     int i, j;
@@ -96,7 +96,8 @@ void HoughLinesCustom(const Mat &img, float rho, float theta,
     const uchar *image = img.ptr();
     int step = (int)img.step;
     int width = img.cols;
-    int height = img.rows;
+    //int height = img.rows;
+    int height = roi_end - roi_start;
 
     if (max_theta < min_theta)
     {
@@ -135,7 +136,8 @@ void HoughLinesCustom(const Mat &img, float rho, float theta,
 #endif
 
     AutoBuffer<int> _accum((numangle + 2) * (numrho + 2));
-    std::vector<int> _sort_buf;
+    std::vector<int> _sort_buf_right;
+    std::vector<int> _sort_buf_left;
     AutoBuffer<float> _tabSin(numangle);
     AutoBuffer<float> _tabCos(numangle);
     int *accum = _accum;
@@ -151,7 +153,7 @@ void HoughLinesCustom(const Mat &img, float rho, float theta,
     }
 
     // stage 1. fill accumulator
-    for (i = h_roi; i < height; i++)
+    for (i = roi_start; i < roi_end; i++)
         for (j = 0; j < width; j++)
         {
             if (image[i * step + j] != 0)
@@ -166,41 +168,65 @@ void HoughLinesCustom(const Mat &img, float rho, float theta,
 
     // stage 2. find local maximums
     //horizontal lines (~0.5*pi = 90°) are excluded
+    //0.2 and 0.8 for relatively steep (= vertical) lanes --> good for birdseye view
     for (int r = 0; r < numrho; r++)
     {
-        for (int n = 0; n < 0.4 * numangle; n++)
+        for (int n = 0; n < 0.2 * numangle; n++)
         {
             int base = (n + 1) * (numrho + 2) + r + 1;
             if (accum[base] > threshold &&
                 accum[base] > accum[base - 1] && accum[base] >= accum[base + 1] &&
                 accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2])
-                _sort_buf.push_back(base);
+                _sort_buf_left.push_back(base);
         }
-        for (int n = 0.6 * numangle; n < numangle; n++)
+        for (int n = 0.8 * numangle; n < numangle; n++)
         {
             int base = (n + 1) * (numrho + 2) + r + 1;
             if (accum[base] > threshold &&
                 accum[base] > accum[base - 1] && accum[base] >= accum[base + 1] &&
                 accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2])
-                _sort_buf.push_back(base);
+                _sort_buf_right.push_back(base);
         }
     }
 
     // stage 3. sort the detected lines by accumulator value
-    std::sort(_sort_buf.begin(), _sort_buf.end(), hough_cmp_gt(accum));
+    std::sort(_sort_buf_left.begin(), _sort_buf_left.end(), hough_cmp_gt(accum));
+    std::sort(_sort_buf_right.begin(), _sort_buf_right.end(), hough_cmp_gt(accum));
 
     // stage 4. store the first min(total,linesMax) lines to the output buffer
     //skips parallel lines within "range" of radiants angle
     //linesMax = std::min(linesMax, (int)_sort_buf.size());
     double scale = 1. / (numrho + 2);
     double last_angle = 0;
-    double range = 0.3; //range in radiants to check for last_angle, 0.3 radiants = 17,2°
+    double range = 0.3; //range in radiants to check for last_angle, 0.01 radiants = 0.57°
     i = 0;              //counter for numbers of actual line segments
     j = 0;              //traverses the _sort_buf array
-    while (i < linesMax && j < (int)_sort_buf.size())
+    while (i < linesMax && j < (int)_sort_buf_left.size())
     {
         LinePolar line;
-        int idx = _sort_buf[j];
+        int idx = _sort_buf_left[j];
+        int n = cvFloor(idx * scale) - 1;
+        int r = idx - (n + 1) * (numrho + 2) - 1;
+        line.rho = (r - (numrho - 1) * 0.5f) * rho;
+        line.angle = static_cast<float>(min_theta) + n * theta;
+        std::cout << "i: " << i << ", last: " << last_angle << ", lineangle: " << line.angle << std::endl;
+        if (i > 0 && line.angle >= last_angle - range && line.angle <= last_angle + range)
+        {
+            std::cout << "continue" << std::endl;
+            ++j;
+            continue; //current line is too similar (parallel) to previous line -> skip it
+        }
+        last_angle = line.angle;
+        lines.push_back(Vec2f(line.rho, line.angle));
+        ++i;
+        ++j;
+    }
+    i=0;
+    j=0;
+    while (i < linesMax && j < (int)_sort_buf_right.size())
+    {
+        LinePolar line;
+        int idx = _sort_buf_right[j];
         int n = cvFloor(idx * scale) - 1;
         int r = idx - (n + 1) * (numrho + 2) - 1;
         line.rho = (r - (numrho - 1) * 0.5f) * rho;
@@ -222,11 +248,11 @@ void HoughLinesCustom(const Mat &img, float rho, float theta,
 /**
  * Takes a binary image and fills it with black (=0) except for the vertical region of interest (roi) (-> along the y axis)
  * @param img is the image to be modified and returned
- * @param start is the vertical start where the roi is starting
+ * @param start is the vertical start where the roi is starting in percent [0;1]
  */
-void v_roi(Mat &img, const int &start)
+void v_roi(Mat &img, const double &start)
 {
-    rectangle(img, Point(0, 0), Point(img.cols, start), Scalar(0), CV_FILLED);
+    rectangle(img, Point(0, 0), Point(img.cols, img.rows*start), Scalar(0), CV_FILLED);
 }
 
 /**
@@ -241,11 +267,21 @@ void v_roi(Mat &img, const int &start)
  */
 void bird_view(const Mat &input_img, Mat &output_img, double rel_height, double rel_left, double rel_right)
 {
-    Point2f p1[4] = {Point2f(rel_left * input_img.cols, rel_height * input_img.rows), Point2f(rel_right * input_img.cols, rel_height * input_img.rows), Point2f(input_img.cols, input_img.rows), Point2f(0, input_img.rows)};
-    Point2f p2[4] = {Point2f(0, 0), Point2f(input_img.cols, 0), Point2f(input_img.cols, input_img.rows), Point2f(0, input_img.rows)};
+    double offset = 0.4;
+    double offset2 = 0.05;
+    Point2f p1[4] = {Point2f(rel_left * input_img.cols, rel_height * input_img.rows), Point2f(rel_right * input_img.cols, rel_height * input_img.rows), Point2f((rel_right+offset)*input_img.cols, input_img.rows), Point2f((rel_left-offset)*input_img.cols, input_img.rows)};
+    //Point2f p2[4] = {Point2f(0, 0), Point2f(input_img.cols, 0), Point2f(input_img.cols, input_img.rows), Point2f(0, input_img.rows)};
+    Point2f p2[4] = {Point2f((rel_left-offset2)*input_img.cols, 0), Point2f((rel_right+offset2)*input_img.cols, 0), Point2f((rel_right + offset2)*input_img.cols, input_img.rows), Point2f((rel_left - offset2)*input_img.cols, input_img.rows)};
     //for(auto p : p1)
-    //    line(input_img, p, p, Scalar(255), 15);
+        //line(input_img, p, p, Scalar(255,0,255), 15);
+    //for(auto p : p2)
+        //line(input_img, p, p, Scalar(255,255,0), 15);
     Mat mat = getPerspectiveTransform(p1, p2);
+    /*Mat mat = (Mat_<double>(3,3) <<
+                -6.83269851e-01,  -1.49897451e+00,   1.06311163e+03,
+                -4.99600361e-15,  -1.98300615e+00,   9.02267800e+02,
+                -6.93889390e-18,  -2.40257838e-03,   1.00000000e+00);
+    */
     warpPerspective(input_img, output_img, mat, Size(input_img.cols, input_img.rows));
 }
 
@@ -294,9 +330,9 @@ void h_histogram(const Mat &input_img, int *points)
  * @param output_points returns the six points found in the image. If no suitable point is found (-1,-1) is returned
  * @note can be prallelized for the six independent regions -> early aborting as soon as a point is found
  * @note points are saved in output_points as follows (bottom left to top right: 
- * 0 1
- * 2 3
- * 4 5
+ * 0 3
+ * 1 4
+ * 2 5
  */
 void window_search(const Mat &img, const int *input_points, const int &window_width, std::vector<Point> &output_points)
 {
@@ -304,8 +340,8 @@ void window_search(const Mat &img, const int *input_points, const int &window_wi
 		output_points[i]  = Point(-1,-1);
 	}
 	const uchar *image = img.ptr();
-	int low = 0.25*img.rows, mid = 0.5*img.rows, up = 0.75*img.rows;
-	const int offset = 25;
+	int low = 0.1*img.rows, mid = 0.5*img.rows, up = 0.9*img.rows;
+	const int offset = 50;
 	assert ((low-offset >= 0) && (up+offset < img.rows));
 
 	for (int r = -offset; r < offset; ++r)
@@ -314,17 +350,44 @@ void window_search(const Mat &img, const int *input_points, const int &window_wi
 		{
 			if(image[(low+r)*img.cols + input_points[0]+c] == 255 && output_points[0].x == -1)
 				output_points[0] = Point(input_points[0]+c, (low+r));
-			if(image[(low+r)*img.cols + input_points[1]+c] == 255 && output_points[1].x == -1)
-				output_points[1] = Point(input_points[1]+c, (low+r));
-			if(image[(mid+r)*img.cols + input_points[0]+c] == 255 && output_points[2].x == -1)
-				output_points[2] = Point(input_points[0]+c, (mid+r));
-			if(image[(mid+r)*img.cols + input_points[1]+c] == 255 && output_points[3].x == -1)
-				output_points[3] = Point(input_points[1]+c, (mid+r));
-			if(image[(up+r)*img.cols + input_points[0]+c] == 255 && output_points[4].x == -1)
-				output_points[4] = Point(input_points[0]+c, (up+r));
+			if(image[(low+r)*img.cols + input_points[1]+c] == 255 && output_points[3].x == -1)
+				output_points[3] = Point(input_points[1]+c, (low+r));
+			if(image[(mid+r)*img.cols + input_points[0]+c] == 255 && output_points[1].x == -1)
+				output_points[1] = Point(input_points[0]+c, (mid+r));
+			if(image[(mid+r)*img.cols + input_points[1]+c] == 255 && output_points[4].x == -1)
+				output_points[4] = Point(input_points[1]+c, (mid+r));
+			if(image[(up+r)*img.cols + input_points[0]+c] == 255 && output_points[2].x == -1)
+				output_points[2] = Point(input_points[0]+c, (up+r));
 			if(image[(up+r)*img.cols + input_points[1]+c] == 255 && output_points[5].x == -1)
 				output_points[5] = Point(input_points[1]+c, (up+r));
 		}
 	}
-    
+}
+
+/**
+ * Takes three points, fits a quadratic curve to them and draws the curve on the image
+ * @param image to be drawn on
+ * @param points holding three points
+ * @param start is index of first Point in points to be considered
+ */
+void draw_curve(Mat &image, const std::vector<Point> points, const uint start)
+{
+    assert(points.size() >= 3+start);
+    uchar * img = image.ptr();
+    Mat lhs = (Mat_<double>(3,3) << 
+                    points[0+start].y*points[0+start].y, points[0+start].y, 1.,
+                    points[1+start].y*points[1+start].y, points[1+start].y, 1.,
+                    points[2+start].y*points[2+start].y, points[2+start].y, 1.);
+
+    Mat rhs = (Mat_<double>(3,1) << 
+                    points[0+start].x, points[1+start].x, points[2+start].x);
+
+    Mat solution = Mat_<double>();
+
+    solve(lhs, rhs, solution);
+
+    const double * sol = solution.ptr<double>();
+    for(int r = 0; r < image.rows; ++r)
+        img[r*image.cols + static_cast<int>((sol[0]*r*r+sol[1]*r+sol[2]))] = 128;
+
 }
