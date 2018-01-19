@@ -256,6 +256,7 @@ void v_roi(Mat &img, const double &start)
 }
 
 /**
+ * @note  ### Deprecated ###
  * Transforms the trapezoid (p1) of the input image to a rectangle (p2) in the output image creating a top-down 'bird view' image
  * @param input_img input image
  * @param output_img empty image with same size as input_img
@@ -265,23 +266,15 @@ void v_roi(Mat &img, const double &start)
  * @note p1 has to be modified for different cameras and positions of the camera
  * @note after transformation edges of lines get blurry --> might be a problem for canny edge detection
  */
-void bird_view(const Mat &input_img, Mat &output_img, double rel_height, double rel_left, double rel_right)
+void bird_view(const Mat &input_img, Mat &output_img, double rel_height, double rel_left, double rel_right, Mat *transform)
 {
     double offset = 0.4;
     double offset2 = 0.05;
     Point2f p1[4] = {Point2f(rel_left * input_img.cols, rel_height * input_img.rows), Point2f(rel_right * input_img.cols, rel_height * input_img.rows), Point2f((rel_right+offset)*input_img.cols, input_img.rows), Point2f((rel_left-offset)*input_img.cols, input_img.rows)};
     //Point2f p2[4] = {Point2f(0, 0), Point2f(input_img.cols, 0), Point2f(input_img.cols, input_img.rows), Point2f(0, input_img.rows)};
     Point2f p2[4] = {Point2f((rel_left-offset2)*input_img.cols, 0), Point2f((rel_right+offset2)*input_img.cols, 0), Point2f((rel_right + offset2)*input_img.cols, input_img.rows), Point2f((rel_left - offset2)*input_img.cols, input_img.rows)};
-    //for(auto p : p1)
-        //line(input_img, p, p, Scalar(255,0,255), 15);
-    //for(auto p : p2)
-        //line(input_img, p, p, Scalar(255,255,0), 15);
+    
     Mat mat = getPerspectiveTransform(p1, p2);
-    /*Mat mat = (Mat_<double>(3,3) <<
-                -6.83269851e-01,  -1.49897451e+00,   1.06311163e+03,
-                -4.99600361e-15,  -1.98300615e+00,   9.02267800e+02,
-                -6.93889390e-18,  -2.40257838e-03,   1.00000000e+00);
-    */
     warpPerspective(input_img, output_img, mat, Size(input_img.cols, input_img.rows));
 }
 
@@ -322,7 +315,7 @@ void h_histogram(const Mat &input_img, int *points)
 
 
 /**
- * Given two input window starting points (from a h_histogram), search those in three different places along the y-axis 
+ * Given two input-window-starting-points (from a h_histogram), search those in three different places along the y-axis 
  * to find 6 total points of the two curved road lane
  * @param img image to be searched for the six road lane points
  * @param input_points holds the two window starting points from a h_histogram

@@ -14,6 +14,7 @@ void HoughLinesCustom(const Mat &img, float rho, float theta,
 
 void v_roi(Mat &img, const int &start);
 
+//Deprecated
 void bird_view(const Mat &input_img, Mat &output_img, double rel_height, double rel_left, double rel_right);
 
 void h_histogram(const Mat &input_img, int *points);

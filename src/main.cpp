@@ -128,10 +128,10 @@ void partitioned_hough(const Mat &img, const int *part_coords, const int num_par
 
 /**
  * Converts the polar coordiantes from a Hough Transform to points according to their start/end of each partition
- * @param lines the polar coordinates from a Hough Transform
- * @param num_lines the number of lines of each side of each partition
- * @param coords_part coordinates of the partitions
- * @param points holds the converted Points 
+ * @param lines The polar coordinates returned from a Hough Transform
+ * @param num_lines The number of lines of each side of each partition
+ * @param coords_part Coordinates of the partitions
+ * @param points Holds the converted Points 
  */
 void get_points(std::vector<Vec2f> &lines, const int num_lines, const int *coords_part, std::vector<Point> &points)
 {
@@ -161,21 +161,44 @@ int main(int argc, char **argv)
 	char *image_name = argv[1];
 	Mat image, processed, bird;
 	image = imread(image_name, 1);
+	Mat mask = Mat(Size(image.cols, image.rows), image.type());
 	if (argc != 2 || !image.data)
 	{
 		printf(" No image data \n ");
 		return -1;
 	}
 
-	bird_view(image, bird, 0.6, 0.46, 0.54);
-	show_image("bird", bird, true);
+
 
 	/**
 	 * To be read in from parameter file
 	 */
-	const double ROI_START = 0.;
+	const double ROI_START = 0.3;
 	const int NUM_PART = 2;
 	const int NUM_LINES = 1;
+	const double B_OFFSET_MID = 0.04;
+	const double B_OFFSET = 0.4;
+    const double B_offset2 = 0.05;
+    const double B_HEIGHT = 0.6; //or: ROI_START
+
+	/**
+	 * Program
+	 */
+
+	const Point2f b_p1[4] = {Point2f((0.5-B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows), Point2f((0.5 + B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows), Point2f((0.5 + B_OFFSET_MID + B_OFFSET)*image.cols, image.rows), Point2f((0.5 - B_OFFSET_MID - B_OFFSET)*image.cols, image.rows)};
+    const Point2f b_p2[4] = {Point2f((0.5-B_OFFSET_MID-B_offset2)*image.cols, 0), Point2f((0.5+B_OFFSET_MID+B_offset2)*image.cols, 0), Point2f((0.5+B_OFFSET_MID+B_offset2)*image.cols, image.rows), Point2f((0.5-B_OFFSET_MID-B_offset2)*image.cols, image.rows)};
+
+	const Mat b_mat = getPerspectiveTransform(b_p1, b_p2);
+	const Mat b_inv_mat = getPerspectiveTransform(b_p2, b_p1);
+	warpPerspective(image, bird, b_mat, Size(image.cols, image.rows));
+	show_image("bird", bird, true);
+	line(mask, Point(1, 1), Point(300,200), Scalar(200,0,200), 20, 8, 0);
+	show_image("line", mask, true);
+	warpPerspective(mask, mask, b_inv_mat, Size(image.cols, image.rows));
+	show_image("trans mask", mask, true);
+	mask.copyTo(image,mask);
+	show_image("orig mit", image, true);
+
 
 
 	int coords_part [NUM_PART+1];
@@ -214,8 +237,15 @@ int main(int argc, char **argv)
 	std::vector<Point> points;
 	get_points(lines, NUM_LINES, coords_part, points);
 
+	for (unsigned int i = 0; i<points.size();++i)
+	{
+		line(processed, points[i], points[i], Scalar((double)i/points.size()*255., 255), 7, CV_AA);
+	}
+	show_image("points", processed, true);
+
+
 	for(auto p = points.begin(); p != points.end(); p+=2)		
-		line(processed, *p, *(p+1), Scalar(125), 10, CV_AA);
+		line(processed, *p, *(p+1), Scalar(125), 5, CV_AA);
 
 	std::cout << "draw" << std::endl;
 	show_image("lines", processed, true);
