@@ -193,6 +193,13 @@ int main(int argc, char **argv)
 	warpPerspective(image, bird, b_mat, Size(image.cols, image.rows));
 	show_image("bird", bird, true);
 	line(mask, Point(1, 1), Point(300,200), Scalar(200,0,200), 20, 8, 0);
+	std::vector<Point2f> poi = {Point2f(1,1), Point2f(300,200)};
+	std::vector<Point2f> out;
+	perspectiveTransform(poi, out, b_inv_mat);
+
+	line(image, out[0], out[1], Scalar(0,200,0), 1, 8, 0);
+	show_image("transfrom", image, true);
+
 	show_image("line", mask, true);
 	warpPerspective(mask, mask, b_inv_mat, Size(image.cols, image.rows));
 	show_image("trans mask", mask, true);
