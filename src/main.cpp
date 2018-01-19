@@ -179,7 +179,7 @@ int main(int argc, char **argv)
 	const double B_OFFSET_MID = 0.04;
 	const double B_OFFSET = 0.4;
     const double B_offset2 = 0.05;
-    const double B_HEIGHT = 0.6; //or: ROI_START
+    const double B_HEIGHT = ROI_START; //or: ROI_START
 
 	/**
 	 * Program
