@@ -168,18 +168,26 @@ int main(int argc, char **argv)
 		return -1;
 	}
 
-
+	/**
+	 * random
+	 */
+	//int fontFace = FONT_HERSHEY_SCRIPT_SIMPLEX;
+	//double fontScale = 2;
+	//int thickness = 3;
+	//putText(processed, std::to_string(number), p, fontFace, fontScale, Scalar::all(255), thickness, 8);
 
 	/**
 	 * To be read in from parameter file
 	 */
-	const double ROI_START = 0.3;
+	const double ROI_START = 0.6;
 	const int NUM_PART = 2;
 	const int NUM_LINES = 1;
 	const double B_OFFSET_MID = 0.04;
 	const double B_OFFSET = 0.4;
     const double B_offset2 = 0.05;
     const double B_HEIGHT = ROI_START; //or: ROI_START
+	const int W_NUM_WINDOWS = 10;
+	const int W_WIDTH = 40;
 
 	/**
 	 * Program
@@ -187,38 +195,42 @@ int main(int argc, char **argv)
 
 	const Point2f b_p1[4] = {Point2f((0.5-B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows), Point2f((0.5 + B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows), Point2f((0.5 + B_OFFSET_MID + B_OFFSET)*image.cols, image.rows), Point2f((0.5 - B_OFFSET_MID - B_OFFSET)*image.cols, image.rows)};
     const Point2f b_p2[4] = {Point2f((0.5-B_OFFSET_MID-B_offset2)*image.cols, 0), Point2f((0.5+B_OFFSET_MID+B_offset2)*image.cols, 0), Point2f((0.5+B_OFFSET_MID+B_offset2)*image.cols, image.rows), Point2f((0.5-B_OFFSET_MID-B_offset2)*image.cols, image.rows)};
-
 	const Mat b_mat = getPerspectiveTransform(b_p1, b_p2);
 	const Mat b_inv_mat = getPerspectiveTransform(b_p2, b_p1);
 	warpPerspective(image, bird, b_mat, Size(image.cols, image.rows));
-	show_image("bird", bird, true);
-	line(mask, Point(1, 1), Point(300,200), Scalar(200,0,200), 20, 8, 0);
-	std::vector<Point2f> poi = {Point2f(1,1), Point2f(300,200)};
+	
+	
+	show_image("bird", bird, true);	
+	
+
+	/* //IMPORTANT!!!
+	std::vector<Point2f> points_in_bird_view = {Point2f(1,1), Point2f(300,200)};
 	std::vector<Point2f> out;
-	perspectiveTransform(poi, out, b_inv_mat);
-
-	line(image, out[0], out[1], Scalar(0,200,0), 1, 8, 0);
-	show_image("transfrom", image, true);
-
-	show_image("line", mask, true);
-	warpPerspective(mask, mask, b_inv_mat, Size(image.cols, image.rows));
-	show_image("trans mask", mask, true);
-	mask.copyTo(image,mask);
-	show_image("orig mit", image, true);
+	perspectiveTransform(points_in_bird_view, out, b_inv_mat);
+	*/
 
 
 
 	int coords_part [NUM_PART+1];
-	sub_partition(image.rows*ROI_START, image.rows, NUM_PART, true, coords_part);
+	sub_partition(0, image.rows, NUM_PART, true, coords_part);
 	for(auto c:coords_part)
 		std::cout << c << std::endl;
 
 	cvtColor(bird, processed, COLOR_BGR2GRAY);
-	//canny_blur(processed);
+
 	show_image("roi", processed, true);
 	//h_sobel(processed);
 	//show_image("sobel", processed, true);
 	canny_blur(processed);
+	show_image("canny", processed, true);
+	std::vector<Point2f> w_points;
+	line(processed, Point(520, 92), Point(518, 92), Scalar(255), 5);
+	multiple_windows_search(processed, W_NUM_WINDOWS, W_WIDTH, w_points);
+	for(auto &p:w_points)
+	{
+		line(processed, p, p, Scalar(128), 5);
+	}
+
 	show_image("canny", processed, true);
 	std::vector<Vec2f> lines;
 	int histo_points[2];

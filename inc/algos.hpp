@@ -22,6 +22,9 @@ void h_histogram(const Mat &input_img, int *points);
 void window_search(const Mat &img, const int *input_points, const int &window_width, 
                     std::vector<Point> &output_points);
 
-void draw_curve(Mat &image, const std::vector<Point> points, const uint start);
+void multiple_windows_search(Mat &input_img, const int num_windows, const int width, 
+                    std::vector<Point2f> &output_points);
+
+void draw_curve(Mat &image, const std::vector<Point> &points, const uint start);
 
 
