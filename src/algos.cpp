@@ -351,10 +351,10 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
     for (int i = 0; i < num_windows; ++i)
     {
         findNonZero(Mat(input_img, Rect(x - x_offset, y - y_offset, width, height)), non_zero_left);
-        
-        #ifndef NDEBUG
-        //rectangle(input_img, Rect(x-x_offset, y-y_offset, width-2, height-2), Scalar(255));
-        #endif
+
+#ifndef NDEBUG
+//rectangle(input_img, Rect(x-x_offset, y-y_offset, width-2, height-2), Scalar(255));
+#endif
 
         x_tmp = 0;
         y_tmp = 0;
@@ -375,22 +375,23 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
         else
         {
             //if enough points are already found, use the previous 2 to linearly extrapolate to the current point
-            if(i >= 2)
+            if (i >= 2)
             {
-                double slope = (output_points[i-1].x - output_points[i-2].x)/(output_points[i-1].y - output_points[i-2].y);
+                double slope = (output_points[i - 1].x - output_points[i - 2].x) / (output_points[i - 1].y - output_points[i - 2].y);
                 y_tmp = y;
-                x_tmp = x-(height*slope); 
+                x_tmp = x - (height * slope);
             }
             //if not, move up in a straight line
-            else{
+            else
+            {
                 x_tmp = x;
                 y_tmp = y;
             }
         }
 
-        #ifndef NDEBUG
-        //line(input_img, Point(x_tmp, y_tmp), Point(x_tmp, y_tmp), Scalar(255));
-        #endif
+#ifndef NDEBUG
+//line(input_img, Point(x_tmp, y_tmp), Point(x_tmp, y_tmp), Scalar(255));
+#endif
 
         output_points.push_back(Point2f(x_tmp, y_tmp));
 
@@ -399,7 +400,6 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
         x = x_tmp;
 
         non_zero_left.clear();
-
     }
 
     //right points analogous
@@ -410,11 +410,11 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
     for (int i = 0; i < num_windows; ++i)
     {
         findNonZero(Mat(input_img, Rect(x - x_offset, y - y_offset, width, height)), non_zero_right);
-        
-        #ifndef NDEBUG
-        //rectangle(input_img, Rect(x-x_offset, y-y_offset, width-1, height-2), Scalar(255));
-        #endif
-        
+
+#ifndef NDEBUG
+//rectangle(input_img, Rect(x-x_offset, y-y_offset, width-1, height-2), Scalar(255));
+#endif
+
         x_tmp = 0;
         y_tmp = 0;
 
@@ -430,21 +430,22 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
         }
         else
         {
-            if(i >= 2)
+            if (i >= 2)
             {
-                double slope = (output_points[num_windows+i-1].x - output_points[num_windows+i-2].x)/(output_points[num_windows+i-1].y - output_points[num_windows+i-2].y);
+                double slope = (output_points[num_windows + i - 1].x - output_points[num_windows + i - 2].x) / (output_points[num_windows + i - 1].y - output_points[num_windows + i - 2].y);
                 y_tmp = y;
-                x_tmp = x-(height*slope); 
+                x_tmp = x - (height * slope);
             }
-            else{
+            else
+            {
                 x_tmp = x;
                 y_tmp = y;
             }
         }
 
-        #ifndef NDEBUG
-        //line(input_img, Point(x_tmp, y_tmp), Point(x_tmp, y_tmp), Scalar(255), 2, 8, 0);
-        #endif
+#ifndef NDEBUG
+//line(input_img, Point(x_tmp, y_tmp), Point(x_tmp, y_tmp), Scalar(255), 2, 8, 0);
+#endif
 
         output_points.push_back(Point2f(x_tmp, y_tmp));
 
@@ -521,6 +522,41 @@ void draw_curve(Mat &image, const std::vector<Point> &points, const uint start)
     solve(lhs, rhs, solution);
 
     const double *sol = solution.ptr<double>();
+    for(int i = 0; i < points.size()-start; ++i)
+        std::cout << sol[i] << ", " << std::endl;
     for (int r = 0; r < image.rows; ++r)
         img[r * image.cols + static_cast<int>((sol[0] * r * r + sol[1] * r + sol[2]))] = 128;
+}
+
+/**
+ * Takes an input vector of points and does a polynomal regression on it
+ * It always fits a polynomial of order = num_points-1
+ * @param points Vector holding the points to be fit
+ * @param coeff Return vector holding the num_points coefficients
+ * @note See here: http://mathworld.wolfram.com/LeastSquaresFittingPolynomial.html
+ */
+void poly_reg(const std::vector<Point> &points, std::vector<double> &coeff)
+{
+    const int num_points = points.size();
+    Mat lhs = Mat_<double>(num_points, num_points);
+    Mat rhs = Mat(num_points, 1, CV_64F);
+    Mat solution = Mat_<double>();
+
+    //constructs simple matrix (not Vandermonde matrix)
+    for (int i = 0; i < num_points; ++i)
+    {
+        for (int j = 0; j < num_points; ++j)
+        {
+            lhs.at<double>(i, j) = std::pow((double)points[i].x, j);
+        }
+    }
+
+    for (int i = 0; i < num_points; ++i)
+        rhs.at<double>(i) = points[i].y;
+
+    solve(lhs, rhs, solution);
+
+    const double *sol = solution.ptr<double>();
+    for(int i = 0; i < num_points; ++i)
+        coeff.push_back(sol[i]);
 }

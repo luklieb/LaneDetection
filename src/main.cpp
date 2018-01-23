@@ -199,6 +199,11 @@ int main(int argc, char **argv)
 	const Mat b_inv_mat = getPerspectiveTransform(b_p2, b_p1);
 	warpPerspective(image, bird, b_mat, Size(image.cols, image.rows));
 	
+	std::vector<Point> test_points = {Point(4,2), Point(4, -2), Point(9,3)};
+	std::vector<double> coeff;
+	poly_reg(test_points, coeff);
+
+	draw_curve(image, test_points, 0);
 	
 	show_image("bird", bird, true);	
 	

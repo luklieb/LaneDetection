@@ -5,6 +5,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 #include <numeric>
+#include <cmath>
 
 using namespace cv;
 
@@ -26,5 +27,7 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
                     std::vector<Point2f> &output_points);
 
 void draw_curve(Mat &image, const std::vector<Point> &points, const uint start);
+
+void poly_reg(const std::vector<Point> &points, std::vector<double> &coeff);
 
 
