@@ -68,15 +68,19 @@ struct hough_cmp_gt
 };
 
 /**
- * Returns rho and theta coordiantes of the found lines
- * Copied from github opencv/modules/imgproc/src/hough.cpp
- * @param img input image 
- * @param rho distance resolution parameter in pixels
- * @param theta angle resolution parameter in radiants
- * @param threshold minimum number of intersections to detect a line
- * @param lines vector returning the found lines (in rho and theta), at beginning of vector all linesMax left lines, then all linesMax right lines
- * @param linesMax number of lines to be found per side
- * @param h_roi start of the horizontal region of interest in percent [0;1]
+ * Returns polar coordinates (rho and theta) of the found lines
+ * Copied from github opencv/modules/imgproc/src/hough.cpp, but adapted to improve lane detection performance
+ * @param img Input image 
+ * @param rho Distance resolution parameter in pixels
+ * @param theta Angle resolution parameter in radiants
+ * @param threshold Minimum number of intersections to detect a line
+ * @param left_lines Vector returning the found lines_max lines (in rho and theta) of the left side
+ * @param right_lines Vector returning the found lines_max lines (in rho and theta) of the right side
+ * @param lines_max Number of lines to be found per side
+ * @param h_start Start of the horizontal region of interest in pixels (probably from sub_partition())
+ * @param h_end End of the horizontal region of interest in pixels (probably from sub_partition())
+ * @param min_theta Should be 0
+ * @param max_theta Should be CV_PI
  * @note be aware that if the current line is similar (parrallel) to the previous line it gets ignored
  *       -> might cause problems with "bird eye view" (because then both road lines are parallel)
  */
@@ -84,9 +88,9 @@ struct hough_cmp_gt
  * @note: add further failsafe (one more bool to check wheter birdsview or not and then
  * add restrictions in function to restrict e.g. the angle of the second line, etc.)
  */
-void HoughLinesCustom(const Mat &img, float rho, float theta,
-                      int threshold, std::vector<Vec2f> &lines, int linesMax, int roi_start, int roi_end,
-                      double min_theta, double max_theta)
+void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold, 
+                        std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, 
+                        int lines_max, int roi_start, int roi_end, double min_theta, double max_theta)
 {
     int i, j;
     float irho = 1 / rho;
@@ -96,7 +100,6 @@ void HoughLinesCustom(const Mat &img, float rho, float theta,
     const uchar *image = img.ptr();
     int step = (int)img.step;
     int width = img.cols;
-    //int height = img.rows;
     int height = roi_end - roi_start;
 
     if (max_theta < min_theta)
@@ -198,10 +201,10 @@ void HoughLinesCustom(const Mat &img, float rho, float theta,
     //linesMax = std::min(linesMax, (int)_sort_buf.size());
     double scale = 1. / (numrho + 2);
     double last_angle = 0;
-    double range = 0.3; //range in radiants to check for last_angle, 0.01 radiants = 0.57°
+    double range = 0.1; //range in radiants to check for last_angle, 0.01 radiants = 0.57°
     i = 0;              //counter for numbers of actual line segments
     j = 0;              //traverses the _sort_buf array
-    while (i < linesMax && j < (int)_sort_buf_left.size())
+    while (i < lines_max && j < (int)_sort_buf_left.size())
     {
         LinePolar line;
         int idx = _sort_buf_left[j];
@@ -217,13 +220,13 @@ void HoughLinesCustom(const Mat &img, float rho, float theta,
             continue; //current line is too similar (parallel) to previous line -> skip it
         }
         last_angle = line.angle;
-        lines.push_back(Vec2f(line.rho, line.angle));
+        left_lines.push_back(Vec2f(line.rho, line.angle));
         ++i;
         ++j;
     }
     i = 0;
     j = 0;
-    while (i < linesMax && j < (int)_sort_buf_right.size())
+    while (i < lines_max && j < (int)_sort_buf_right.size())
     {
         LinePolar line;
         int idx = _sort_buf_right[j];
@@ -239,7 +242,7 @@ void HoughLinesCustom(const Mat &img, float rho, float theta,
             continue; //current line is too similar (parallel) to previous line -> skip it
         }
         last_angle = line.angle;
-        lines.push_back(Vec2f(line.rho, line.angle));
+        right_lines.push_back(Vec2f(line.rho, line.angle));
         ++i;
         ++j;
     }
@@ -316,18 +319,12 @@ void h_histogram(const Mat &input_img, int *x_points)
  * @param input_img Image to be searched for road lanes
  * @param num_windows The number of windows for both lanes (left and right)
  * @param width The width (in x-direction) of each windows
- * @param points The returned points which were found in the window search. 
+ * @param left_points The returned points which were found in the window search on the left side 
+ * @param right_points The returned points which were found in the window search on the right side 
  * @note The output_points are stored the following way:
- *      first, all num_windows left lane points are stored (from top to bottom),
- *      followed by all num_windows right lane points:
- * 
- *      num_windows-1   2*num_windows-1
- *      ...             ...
- *      1               num_window+1
- *      0               num_windows
  */
 
-void multiple_windows_search(Mat &input_img, const int num_windows, const int width, std::vector<Point2f> &output_points)
+void multiple_windows_search(Mat &input_img, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
 
     int upper_histo[2];
@@ -377,7 +374,7 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
             //if enough points are already found, use the previous 2 to linearly extrapolate to the current point
             if (i >= 2)
             {
-                double slope = (output_points[i - 1].x - output_points[i - 2].x) / (output_points[i - 1].y - output_points[i - 2].y);
+                double slope = (left_points[i - 1].x - left_points[i - 2].x) / (left_points[i - 1].y - left_points[i - 2].y);
                 y_tmp = y;
                 x_tmp = x - (height * slope);
             }
@@ -393,7 +390,7 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
 //line(input_img, Point(x_tmp, y_tmp), Point(x_tmp, y_tmp), Scalar(255));
 #endif
 
-        output_points.push_back(Point2f(x_tmp, y_tmp));
+        left_points.push_back(Point2f(x_tmp, y_tmp));
 
         //move search window one step down
         y -= height;
@@ -432,7 +429,7 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
         {
             if (i >= 2)
             {
-                double slope = (output_points[num_windows + i - 1].x - output_points[num_windows + i - 2].x) / (output_points[num_windows + i - 1].y - output_points[num_windows + i - 2].y);
+                double slope = (right_points[i - 1].x - right_points[i - 2].x) / (right_points[i - 1].y - right_points[i - 2].y);
                 y_tmp = y;
                 x_tmp = x - (height * slope);
             }
@@ -447,7 +444,7 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
 //line(input_img, Point(x_tmp, y_tmp), Point(x_tmp, y_tmp), Scalar(255), 2, 8, 0);
 #endif
 
-        output_points.push_back(Point2f(x_tmp, y_tmp));
+        right_points.push_back(Point2f(x_tmp, y_tmp));
 
         y -= height;
         x = x_tmp;
@@ -464,18 +461,15 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
  * @param window_width width of one of the two search windows
  * @param output_points returns the six points found in the image. If no suitable point is found (-1,-1) is returned
  * @note can be prallelized for the six independent regions -> early aborting as soon as a point is found
- * @note points are saved in output_points as follows (first all left lane points (from top to bottom),
- *      then all right left lane points (from top to bottom):   
- *      2 5
- *      1 4
- *      0 3
+ * @note points are saved from top (high y values) to bottom (low y values) in [left/right]_points
  */
-void window_search(const Mat &img, const int *input_points, const int &window_width, std::vector<Point> &output_points)
+void window_search(const Mat &img, const int *input_points, const int &window_width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
-    for (int i = 0; i < 6; ++i)
-    {
-        output_points[i] = Point(-1, -1);
-    }
+ 
+    left_points.clear();
+    right_points.clear();
+    left_points.insert(left_points.begin(), 3, Point2f(-1, -1));
+    right_points.insert(right_points.begin(), 3, Point2f(-1, -1));
     const uchar *image = img.ptr();
     int low = 0.1 * img.rows, mid = 0.5 * img.rows, up = 0.9 * img.rows;
     const int offset = 50;
@@ -485,18 +479,18 @@ void window_search(const Mat &img, const int *input_points, const int &window_wi
     {
         for (int c = -window_width; c < window_width; ++c)
         {
-            if (image[(low + r) * img.cols + input_points[0] + c] == 255 && output_points[2].x == -1)
-                output_points[2] = Point(input_points[0] + c, (low + r));
-            if (image[(low + r) * img.cols + input_points[1] + c] == 255 && output_points[5].x == -1)
-                output_points[5] = Point(input_points[1] + c, (low + r));
-            if (image[(mid + r) * img.cols + input_points[0] + c] == 255 && output_points[1].x == -1)
-                output_points[1] = Point(input_points[0] + c, (mid + r));
-            if (image[(mid + r) * img.cols + input_points[1] + c] == 255 && output_points[4].x == -1)
-                output_points[4] = Point(input_points[1] + c, (mid + r));
-            if (image[(up + r) * img.cols + input_points[0] + c] == 255 && output_points[0].x == -1)
-                output_points[0] = Point(input_points[0] + c, (up + r));
-            if (image[(up + r) * img.cols + input_points[1] + c] == 255 && output_points[3].x == -1)
-                output_points[3] = Point(input_points[1] + c, (up + r));
+            if (image[(low + r) * img.cols + input_points[0] + c] == 255 && left_points[2].x == -1)
+                left_points[2] = Point2f(input_points[0] + c, (low + r));
+            if (image[(low + r) * img.cols + input_points[1] + c] == 255 && right_points[2].x == -1)
+                right_points[2] = Point2f(input_points[1] + c, (low + r));
+            if (image[(mid + r) * img.cols + input_points[0] + c] == 255 && left_points[1].x == -1)
+                left_points[1] = Point2f(input_points[0] + c, (mid + r));
+            if (image[(mid + r) * img.cols + input_points[1] + c] == 255 && right_points[1].x == -1)
+                right_points[1] = Point2f(input_points[1] + c, (mid + r));
+            if (image[(up + r) * img.cols + input_points[0] + c] == 255 && left_points[0].x == -1)
+                left_points[0] = Point2f(input_points[0] + c, (up + r));
+            if (image[(up + r) * img.cols + input_points[1] + c] == 255 && right_points[0].x == -1)
+                right_points[0] = Point2f(input_points[1] + c, (up + r));
         }
     }
 }
@@ -505,24 +499,23 @@ void window_search(const Mat &img, const int *input_points, const int &window_wi
  * Takes three points, fits a quadratic curve to them and draws the curve on the image
  * @param image to be drawn on
  * @param points holding three points
- * @param start is index of first Point in points to be considered
  */
-void draw_curve(Mat &image, const std::vector<Point> &points, const uint start)
+void draw_curve(Mat &image, const std::vector<Point> &points)
 {
-    assert(points.size() >= 3 + start);
+    assert(points.size() >= 3);
     uchar *img = image.ptr();
-    Mat lhs = (Mat_<double>(3, 3) << points[0 + start].y * points[0 + start].y, points[0 + start].y, 1.,
-               points[1 + start].y * points[1 + start].y, points[1 + start].y, 1.,
-               points[2 + start].y * points[2 + start].y, points[2 + start].y, 1.);
+    Mat lhs = (Mat_<double>(3, 3) << points[0 ].y * points[0 ].y, points[0 ].y, 1.,
+               points[1 ].y * points[1 ].y, points[1 ].y, 1.,
+               points[2 ].y * points[2 ].y, points[2 ].y, 1.);
 
-    Mat rhs = (Mat_<double>(3, 1) << points[0 + start].x, points[1 + start].x, points[2 + start].x);
+    Mat rhs = (Mat_<double>(3, 1) << points[0 ].x, points[1 ].x, points[2 ].x);
 
     Mat solution = Mat_<double>();
 
     solve(lhs, rhs, solution);
 
     const double *sol = solution.ptr<double>();
-    for(int i = 0; i < points.size()-start; ++i)
+    for(unsigned int i = 0; i < points.size(); ++i)
         std::cout << sol[i] << ", " << std::endl;
     for (int r = 0; r < image.rows; ++r)
         img[r * image.cols + static_cast<int>((sol[0] * r * r + sol[1] * r + sol[2]))] = 128;
@@ -560,3 +553,5 @@ void poly_reg(const std::vector<Point> &points, std::vector<double> &coeff)
     for(int i = 0; i < num_points; ++i)
         coeff.push_back(sol[i]);
 }
+
+

@@ -104,53 +104,78 @@ void h_sobel(Mat &image){
 
 /**
  * Applies the Hough Transformation on different sub-regions 
- * @param img the image for the Hough Transformation
- * @param part_coords holds the num_part+1 coordinates of the partitions
- * @param num_part number of sub-domains/partitions
- * @param num_lines number of lines per partition per side 
- * @param lines vector holding the polar coordinates of the detected lines
- * @note lines stores the detected lines the following way: beginning of vector
- * 		the left num_lines lines of the first partition, the right num_lines of the first partition, ...
- * 		..., the right num_lines of the last partition at the end of the vector
- * 		--> for i=0...num_part-1: append( num_lines*left(partition_i), num_lines*right(partition_i) )
- * @note lines has size 2*num_lines*num_part 
+ * @param img The image for the Hough Transformation
+ * @param part_coords Holds the num_part+1 coordinates of the partitions
+ * @param num_part Number of sub-domains/partitions
+ * @param num_lines Number of lines per partition per side 
+ * @param left_lines Vector holding the polar coordinates of the detected lines on the left side (lane)
+ * @param right_lines Vector holding the polar coordinates of the detected lines on the right side (lane)
+ * @note [left/right]_lines stores at the beginning num_lines lines of the first partition,
+ * 		at the end num_lines lines of the last partition
  */
-void partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines, std::vector<Vec2f> &lines)
+void partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines)
 {
-	std::vector<Vec2f> lines_tmp;
+	left_lines.clear();
+	right_lines.clear();
+	std::vector<Vec2f> left_lines_tmp;
+	std::vector<Vec2f> right_lines_tmp;
 	for(int i = 0; i<num_part; ++i)
 	{
-		HoughLinesCustom(img, 1., CV_PI / 180., 10, lines_tmp, num_lines, part_coords[i], part_coords[i+1]);
-		lines.insert(lines.end(), lines_tmp.begin(), lines_tmp.end());
-		lines_tmp.clear();
+		HoughLinesCustom(img, 1., CV_PI / 180., 10, left_lines_tmp, right_lines_tmp, num_lines, part_coords[i], part_coords[i+1]);
+		left_lines.insert(left_lines.end(), left_lines_tmp.begin(), left_lines_tmp.end());
+		right_lines.insert(right_lines.end(), right_lines_tmp.begin(), right_lines_tmp.end());
+		left_lines_tmp.clear();
+		right_lines_tmp.clear();
 	}
 }
 
 /**
- * Converts the polar coordiantes from a Hough Transform to points according to their start/end of each partition
+ * Converts the polar coordiantes from a Hough Transform (lines) to points according to their start/end of each partition
  * @param lines The polar coordinates returned from a Hough Transform
  * @param num_lines The number of lines of each side of each partition
  * @param coords_part Coordinates of the partitions
  * @param points Holds the converted Points 
  */
-void get_points(std::vector<Vec2f> &lines, const int num_lines, const int *coords_part, std::vector<Point> &points)
+void get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines, const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
+
+	left_points.clear();
+	right_points.clear();
 	int i = 0;
 	int j = 0;
-	for (auto p : lines)
+	for (auto p : left_lines)
 	{
 		//std::cout << p[0] << ", " << p[1] / CV_PI << std::endl;
 		float rho = p[0], theta = p[1];
-		Point pt1, pt2;
+		Point2f pt1, pt2;
 		double a = cos(theta), b = sin(theta), a_inv = 1./a;;
 		pt1.y = coords_part[i];
 		pt1.x = (rho - pt1.y*b)*a_inv;
 		pt2.y = coords_part[i+1];	
 		pt2.x = (rho - pt2.y*b)*a_inv;
-		points.push_back(pt1);
-		points.push_back(pt2);
+		left_points.push_back(pt1);
+		left_points.push_back(pt2);
 		++j;
-		if(j%(num_lines*2) == 0) //num_lines for each left and right half
+		if(j%num_lines == 0)
+			++i;
+	}
+
+	i = 0;
+	j = 0;
+	for (auto p : right_lines)
+	{
+		//std::cout << p[0] << ", " << p[1] / CV_PI << std::endl;
+		float rho = p[0], theta = p[1];
+		Point2f pt1, pt2;
+		double a = cos(theta), b = sin(theta), a_inv = 1./a;;
+		pt1.y = coords_part[i];
+		pt1.x = (rho - pt1.y*b)*a_inv;
+		pt2.y = coords_part[i+1];	
+		pt2.x = (rho - pt2.y*b)*a_inv;
+		right_points.push_back(pt1);
+		right_points.push_back(pt2);
+		++j;
+		if(j%num_lines == 0)
 			++i;
 	}
 }
@@ -180,8 +205,8 @@ int main(int argc, char **argv)
 	 * To be read in from parameter file
 	 */
 	const double ROI_START = 0.6;
-	const int NUM_PART = 2;
-	const int NUM_LINES = 1;
+	const int NUM_PART = 5;
+	const int NUM_LINES = 3;
 	const double B_OFFSET_MID = 0.04;
 	const double B_OFFSET = 0.4;
     const double B_offset2 = 0.05;
@@ -198,13 +223,6 @@ int main(int argc, char **argv)
 	const Mat b_mat = getPerspectiveTransform(b_p1, b_p2);
 	const Mat b_inv_mat = getPerspectiveTransform(b_p2, b_p1);
 	warpPerspective(image, bird, b_mat, Size(image.cols, image.rows));
-	
-	std::vector<Point> test_points = {Point(4,2), Point(4, -2), Point(9,3)};
-	std::vector<double> coeff;
-	poly_reg(test_points, coeff);
-
-	draw_curve(image, test_points, 0);
-	
 	show_image("bird", bird, true);	
 	
 
@@ -228,51 +246,63 @@ int main(int argc, char **argv)
 	//show_image("sobel", processed, true);
 	canny_blur(processed);
 	show_image("canny", processed, true);
-	std::vector<Point2f> w_points;
-	line(processed, Point(520, 92), Point(518, 92), Scalar(255), 5);
-	multiple_windows_search(processed, W_NUM_WINDOWS, W_WIDTH, w_points);
-	for(auto &p:w_points)
+	std::vector<Point2f> w_left_points;
+	std::vector<Point2f> w_right_points;
+	multiple_windows_search(processed, W_NUM_WINDOWS, W_WIDTH, w_left_points, w_right_points);
+	for(auto &p:w_left_points)
 	{
-		line(processed, p, p, Scalar(128), 5);
+		//line(processed, p, p, Scalar(128), 5);
 	}
-
-	show_image("canny", processed, true);
+	for(auto &p:w_right_points)
+	{
+		//line(processed, p, p, Scalar(128), 5);
+	}
+	show_image("multiple", processed, true);
 	std::vector<Vec2f> lines;
 	int histo_points[2];
 	h_histogram(processed, histo_points);
-	line(processed, Point(histo_points[0], 100), Point(histo_points[0], 100), Scalar(255), 5, CV_AA);
-	line(processed, Point(histo_points[1], 100), Point(histo_points[1], 100), Scalar(255), 5, CV_AA);
-	//v_roi(processed, ROI_START);
-	show_image("roi", processed, true);
-	std::vector<Point> bez_points = std::vector<Point>(6);
-	window_search(processed, histo_points, 30, bez_points);
-	for (auto p : bez_points)
+	//line(processed, Point(histo_points[0], 100), Point(histo_points[0], 100), Scalar(255), 5, CV_AA);
+	//line(processed, Point(histo_points[1], 100), Point(histo_points[1], 100), Scalar(255), 5, CV_AA);
+	//show_image("histo", processed, true);
+	window_search(processed, histo_points, W_WIDTH, w_left_points, w_right_points);
+	/*for (auto p : w_left_points)
 		line(processed, p, p, Scalar(255), 5, CV_AA);
-	show_image("window", processed, true);
-
-	draw_curve(processed, bez_points, 0);
-	draw_curve(processed, bez_points, 3);
+	for (auto p : w_right_points)
+		line(processed, p, p, Scalar(255), 5, CV_AA);
+	show_image("w", processed, true);
+	*/
+	//draw_curve(processed, bez_points, 0);
+	//draw_curve(processed, bez_points, 3);
 
 	std::cout << "hough" << std::endl;
 	//HoughLinesCustom(processed, 1, CV_PI / 180., 10, lines, NUM_LINES, 0, processed.rows);
-	partitioned_hough(processed, coords_part, NUM_PART, NUM_LINES, lines);
+	std::vector<Vec2f> h_left_lines;
+	std::vector<Vec2f> h_right_lines;
+	partitioned_hough(processed, coords_part, NUM_PART, NUM_LINES, h_left_lines, h_right_lines);
 	std::cout << "hough_end" << std::endl;
-	std::cout << "num_lines soll: " << NUM_PART*NUM_LINES*2 << ", num_lines ist: " << lines.size() << std::endl; 
-	std::vector<Point> points;
-	get_points(lines, NUM_LINES, coords_part, points);
+	std::cout << "num_lines soll: " << NUM_PART*NUM_LINES*2 << ", num_lines ist: " << h_left_lines.size() << " + " << h_right_lines.size() << std::endl; 
+	std::vector<Point2f> h_left_points;
+	std::vector<Point2f> h_right_points;
+	get_points(h_left_lines, h_right_lines, NUM_LINES, coords_part, h_left_points, h_right_points);
 
-	for (unsigned int i = 0; i<points.size();++i)
+	for (unsigned int i = 0; i<h_left_points.size();++i)
 	{
-		line(processed, points[i], points[i], Scalar((double)i/points.size()*255., 255), 7, CV_AA);
+		line(processed, h_left_points[i], h_left_points[i], Scalar(255), 7, CV_AA);
 	}
-	show_image("points", processed, true);
+	show_image("l points", processed, true);
+	for (unsigned int i = 0; i<h_right_points.size();++i)
+	{
+		line(processed, h_right_points[i], h_right_points[i], Scalar(255), 7, CV_AA);
+	}
+	show_image("r points", processed, true);
 
-
-	for(auto p = points.begin(); p != points.end(); p+=2)		
+	for(auto p = h_left_points.begin(); p != h_left_points.end(); p+=2)		
 		line(processed, *p, *(p+1), Scalar(125), 5, CV_AA);
+	show_image("l lines", processed, true);
+	for(auto p = h_right_points.begin(); p != h_right_points.end(); p+=2)		
+		line(processed, *p, *(p+1), Scalar(125), 5, CV_AA);
+	show_image("r lines", processed, true);
 
-	std::cout << "draw" << std::endl;
-	show_image("lines", processed, true);
 	std::cout << "end" << std::endl;
 
 	//gabor(processed);
