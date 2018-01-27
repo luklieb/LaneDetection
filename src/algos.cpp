@@ -135,6 +135,26 @@ static void alm_(std::vector<Point2f> &points, const int &num_part, const int &n
     points.insert(points.begin(), possible_points[index_tmp].begin(), possible_points[index_tmp].end());
 }
 
+
+void alm_conversion_(std::vector<Point2f> &points)
+{
+    //copy
+    std::vector<Point2f> cpy(points);
+    int size = points.size();
+    assert(size%2 == 0);
+    points.clear();
+    //first point can stay
+    points.push_back(cpy[0]);
+    //compute mean of x-coordinates of adjacent lines
+    for(int i = 1; i < size-1; i += 2)
+    {
+        points.push_back(Point2f(0.5*(cpy[i].x+cpy[i+1].x), cpy[i].y));
+    }
+    //last point can stay
+    points.push_back(cpy[size-1]);
+}
+
+
 //deprecated
 static void draw_curve_(Mat &image, const std::vector<Point> &points)
 {
@@ -156,6 +176,22 @@ static void draw_curve_(Mat &image, const std::vector<Point> &points)
     for (int r = 0; r < image.rows; ++r)
         img[r * image.cols + static_cast<int>((sol[0] * r * r + sol[1] * r + sol[2]))] = 128;
 }
+
+static void draw_poly_(Mat &image, const std::vector<double> &coeff)
+{
+    const int order = coeff.size()-1;
+    double column = 0.;
+    for(int r = 0; r < image.rows; ++r){
+        for (int c = 0; c <= order; ++c)
+        {
+             column += std::pow(coeff[c], c)*r;
+        }
+        image.at<uchar>(r, static_cast<int>(column)) = 255;
+        column = 0.;
+    }
+
+}
+
 
 static void get_points_(const std::vector<Vec2f> &lines, const int &num_lines, const int *coords_part, std::vector<Point2f> &points)
 {
@@ -266,8 +302,11 @@ static void multiple_windows_search_(Mat &input_img, const int num_windows, cons
     }
 }
 
-static void poly_reg_(const std::vector<Point> &points, std::vector<double> &coeff)
+
+static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &coeff)
 {
+    std::cout << "poly reg start" << std::endl;
+    coeff.clear();
     const int num_points = points.size();
     Mat lhs = Mat_<double>(num_points, num_points);
     Mat rhs = Mat(num_points, 1, CV_64F);
@@ -278,16 +317,18 @@ static void poly_reg_(const std::vector<Point> &points, std::vector<double> &coe
     {
         for (int j = 0; j < num_points; ++j)
         {
-            lhs.at<double>(i, j) = std::pow((double)points[i].x, j);
+            lhs.at<double>(i, j) = std::pow((double)points[i].y, j);
         }
     }
 
     for (int i = 0; i < num_points; ++i)
-        rhs.at<double>(i) = points[i].y;
+        rhs.at<double>(i) = points[i].x;
 
     solve(lhs, rhs, solution);
 
     const double *sol = solution.ptr<double>();
+    //coeff.resize(num_points);
+    //coeff.insert(coeff.begin(), sol[0], sol[num_points-1]);
     for (int i = 0; i < num_points; ++i)
         coeff.push_back(sol[i]);
 }
@@ -301,6 +342,13 @@ void alm(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, 
     alm_(left_points, num_part, num_lines);
     alm_(right_points, num_part, num_lines);
 }
+
+void alm_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+{
+    alm_conversion_(left_points);
+    alm_conversion_(right_points);
+}
+
 
 void bird_view(const Mat &input_img, Mat &output_img, double rel_height, double rel_left, double rel_right, Mat *transform)
 {
@@ -330,6 +378,13 @@ void draw_curve(Mat &image, const std::vector<Point> &left_points, const std::ve
     draw_curve_(image, right_points);
 }
 
+void draw_poly(Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff)
+{
+    draw_poly_(image, left_coeff);
+    draw_poly_(image, right_coeff);
+}
+
+
 void gabor(Mat &image)
 {
     //TODO passende parameter finden
@@ -356,6 +411,7 @@ void get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &
 void h_histogram(const Mat &input_img, int *x_points)
 {
     std::vector<int> histo;
+    //"sums up" along y-axis for each column -> returns a "row vector"
     reduce(input_img, histo, 0, CV_REDUCE_SUM);
     int m1 = 0;
     int m2 = 0;
@@ -381,6 +437,7 @@ void h_histogram(const Mat &input_img, int *x_points)
 
 void h_sobel(Mat &image)
 {
+    //consider only horizontal edges
     Sobel(image, image, -1, 1, 0);
 }
 
@@ -568,10 +625,19 @@ void partitioned_hough(const Mat &img, const int *part_coords, const int num_par
 }
 
 //TODO change Point to Point2f and test
-void poly_reg(const std::vector<Point> &left_points, const std::vector<Point> &right_points, std::vector<double> &left_coeff, std::vector<double> &right_coeff)
+void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points, std::vector<double> &left_coeff, std::vector<double> &right_coeff)
 {
     poly_reg_(left_points, left_coeff);
     poly_reg_(right_points, right_coeff);
+}
+
+
+void show_image(String image_name, Mat &image, bool wait)
+{
+	namedWindow(image_name, WINDOW_AUTOSIZE);
+	imshow(image_name, image);
+	if (wait)
+		waitKey(0);
 }
 
 void sub_partition(int start, int end, int number, bool equidistant, int *coords)

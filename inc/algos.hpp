@@ -11,12 +11,16 @@ using namespace cv;
 
 /**
  * global coord system
- * 		  x 
- *	 -|--------> 
- * y  |
- * 	  |
- * 	  v
+ * 
+ * 	l/l	    x    l/h 
+ *     -|--------> 
+ *    y |
+ *      |
+ * h/l  v        h/h
+ *
+ * h: high, l: low
  */
+
 
 /**
  * Conducts Acitve Line Modelling (ALM) on the input points (belonging pariwise to lines from a Hough transform)
@@ -26,6 +30,14 @@ using namespace cv;
  * @param num_lines Number of lines
  */
 void alm(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int &num_part, const int &num_lines);
+
+/**
+ * Converts the points-pairs making up lines returned from alm() into single points (in order to compute the coefficients)
+ * It computes the x-cooordinate mean of two points with the same y-coordinate (two adjacent lines)
+ * @param left_points Holds the points-pairs for the left lane
+ * @param left_points Holds the points-pairs for the right lane
+ */
+void alm_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
 
 /**
  * @note  ### Deprecated ###
@@ -56,6 +68,14 @@ void canny_blur(Mat &image);
 void draw_curve(Mat &image, const std::vector<Point> &left_points, const std::vector<Point> &right_points);
 
 /**
+ * Draws the two polynomials (of order [left/right]_coeff.size()-1) according to their coefficients on the input image
+ * @param image Image to be drawn on
+ * @param left_coeff Holds the coefficients for the left lane polynomial
+ * @param right_coeff Holds the coefficients for the right lane polynomial
+ */
+void draw_poly(Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff);
+
+/**
  * Creates a Gabor kernel and applies it to the input image for edge detection
  * @param image being converted to an edge image
  * @note compare to canny_blur(Mat&)
@@ -71,7 +91,8 @@ void gabor(Mat &image);
  * @note Storage order for both [left/right]_points: points belonging to same line are stored consecutively:
  * 		Point_0(line_0), Point_1(line_0), Point_2(line_1), Point_3(line_1), ..., Point_num_lines*2-1(line_num_lines-1), ..., Point_num_lines*num_part*2-1(line_num_lines*num_part-1) 
  */
-void get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int &num_lines, const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+void get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int &num_lines, 
+                const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
 
 /**
  * Returns the two horizontal (x-coordinates) points (one for right/left half) with the maximum according to the histogram
@@ -146,7 +167,16 @@ void partitioned_hough(const Mat &img, const int *part_coords, const int num_par
  * @param coeff Return vector holding the num_points coefficients
  * @note See here: http://mathworld.wolfram.com/LeastSquaresFittingPolynomial.html
  */
-void poly_reg(const std::vector<Point> &points, std::vector<double> &coeff);
+void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points, 
+                std::vector<double> &left_coeff, std::vector<double> &right_coeff);
+
+/**
+ * Helper function to show an image
+ * @param image_name for the window
+ * @param image to be shwon in window
+ * @param wait option to wait for a key input to close the window showing the image
+ */
+void show_image(String image_name, Mat &image, bool wait);
 
 /**
  * Returns the (x or y) coordinates of the sub-domains

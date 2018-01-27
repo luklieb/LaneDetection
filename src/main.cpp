@@ -7,26 +7,15 @@ using namespace cv;
 
 /**
  * global coord system
- * 		  x 
- *	 -|--------> 
- * y  |
- * 	  |
- * 	  v
+ * 
+ * 	l/l	    x    l/h 
+ *     -|--------> 
+ *    y |
+ *      |
+ * h/l  v        h/h
+ *
+ * h: high, l: low
  */
-
-/**
- * Helper function to show an image
- * @param image_name for the window
- * @param image to be shwon in window
- * @param wait option to wait for a key input to close the window showing the image
- */
-void show_image(String image_name, Mat &image, bool wait)
-{
-	namedWindow(image_name, WINDOW_AUTOSIZE);
-	imshow(image_name, image);
-	if (wait)
-		waitKey(0);
-}
 
 
 int main(int argc, char **argv)
@@ -151,22 +140,77 @@ int main(int argc, char **argv)
 
 	for (unsigned int i = 0; i < h_left_points.size(); ++i)
 	{
-		line(processed, h_left_points[i], h_left_points[i], Scalar(255), 7, CV_AA);
+		line(processed, h_left_points[i], h_left_points[i], Scalar(128), 7, CV_AA);
 	}
 	show_image("alm l points", processed, true);
 
 	for (unsigned int i = 0; i < h_right_points.size(); ++i)
 	{
-		line(processed, h_right_points[i], h_right_points[i], Scalar(255), 7, CV_AA);
+		line(processed, h_right_points[i], h_right_points[i], Scalar(128), 7, CV_AA);
 	}
 	show_image("alm r points", processed, true);
 
-	for (auto p = h_left_points.begin(); p != h_left_points.end(); p += 2)
+	/*for (auto p = h_left_points.begin(); p != h_left_points.end(); p += 2)
 		line(processed, *p, *(p + 1), Scalar(125), 5, CV_AA);
 	show_image("alm l lines", processed, true);
 	for (auto p = h_right_points.begin(); p != h_right_points.end(); p += 2)
 		line(processed, *p, *(p + 1), Scalar(125), 5, CV_AA);
 	show_image("alm r lines", processed, true);
+	*/
+
+	alm_conversion(h_left_points, h_right_points);
+	for (unsigned int i = 0; i < h_left_points.size(); ++i)
+	{
+		line(processed, h_left_points[i], h_left_points[i], Scalar(255), 5, CV_AA);
+	}
+	show_image("conveted alm l points", processed, true);
+
+	for (unsigned int i = 0; i < h_right_points.size(); ++i)
+	{
+		line(processed, h_right_points[i], h_right_points[i], Scalar(255), 5, CV_AA);
+	}
+	show_image("converted alm r points", processed, true);
+
+	std::cout << "left points: ";
+	for(auto p:h_left_points){
+		std::cout << p << ", ";
+	}
+	std::cout << std::endl;
+	std::cout << "right points: ";
+	for(auto p:h_right_points){
+		std::cout << p << ", ";
+	}
+	std::cout << std::endl;
+
+	/*h_left_points.clear();
+	h_left_points.push_back(Point2f(2,4));
+	h_left_points.push_back(Point2f(0,0));
+	h_left_points.push_back(Point2f(-1,1));
+	*/
+	
+	//TODO draw poly function wrong
+
+	std::vector<double> right_coeff;
+	std::vector<double> left_coeff;
+
+	poly_reg(h_left_points, h_right_points, left_coeff, right_coeff);
+
+
+	std::cout << "left coeff: ";
+	for(auto c:left_coeff){
+		std::cout << c << ", ";
+	}
+	std::cout << std::endl << "right coeff: ";
+
+	for(auto c:right_coeff){
+		std::cout << c << ", ";
+	}
+	std::cout << std::endl;
+
+	draw_poly(processed, left_coeff, right_coeff);
+	show_image("drawn", processed, true);
+
+
 
 	std::cout << "end" << std::endl;
 
