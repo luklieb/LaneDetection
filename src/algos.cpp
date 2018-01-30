@@ -86,7 +86,7 @@ struct hough_cmp_gt
 static void alm_(std::vector<Point2f> &points, const int &num_part, const int &num_lines)
 {
     assert(points.size() % 2 == 0);
-    assert(points.size() == 2u * num_part * num_lines);
+    //assert(points.size() == 2u * num_part * num_lines);
 
     std::vector<std::vector<Point2f>> possible_points(num_lines);
     double error_sum[num_lines];
@@ -135,25 +135,23 @@ static void alm_(std::vector<Point2f> &points, const int &num_part, const int &n
     points.insert(points.begin(), possible_points[index_tmp].begin(), possible_points[index_tmp].end());
 }
 
-
 void alm_conversion_(std::vector<Point2f> &points)
 {
     //copy
     std::vector<Point2f> cpy(points);
     int size = points.size();
-    assert(size%2 == 0);
+    assert(size % 2 == 0);
     points.clear();
     //first point can stay
     points.push_back(cpy[0]);
     //compute mean of x-coordinates of adjacent lines
-    for(int i = 1; i < size-1; i += 2)
+    for (int i = 1; i < size - 1; i += 2)
     {
-        points.push_back(Point2f(0.5*(cpy[i].x+cpy[i+1].x), cpy[i].y));
+        points.push_back(Point2f(0.5 * (cpy[i].x + cpy[i + 1].x), cpy[i].y));
     }
     //last point can stay
-    points.push_back(cpy[size-1]);
+    points.push_back(cpy[size - 1]);
 }
-
 
 //deprecated
 static void draw_curve_(Mat &image, const std::vector<Point> &points)
@@ -177,21 +175,19 @@ static void draw_curve_(Mat &image, const std::vector<Point> &points)
         img[r * image.cols + static_cast<int>((sol[0] * r * r + sol[1] * r + sol[2]))] = 128;
 }
 
-static void draw_poly_(Mat &image, const std::vector<double> &coeff)
+static void draw_poly_(Mat &image, const std::vector<double> &coeff, const int order)
 {
-    const int order = coeff.size()-1;
     double column = 0.;
-    for(int r = 0; r < image.rows; ++r){
+    for (int r = 0; r < image.rows; ++r)
+    {
         for (int c = 0; c <= order; ++c)
         {
-             column += std::pow(coeff[c], c)*r;
+            column += std::pow(r, c) * coeff[c];
         }
         image.at<uchar>(r, static_cast<int>(column)) = 255;
         column = 0.;
     }
-
 }
-
 
 static void get_points_(const std::vector<Vec2f> &lines, const int &num_lines, const int *coords_part, std::vector<Point2f> &points)
 {
@@ -236,21 +232,27 @@ static void multiple_windows_search_(Mat &input_img, const int num_windows, cons
     if (left)
     {
         x = upper_histo[0];
+        if(x-x_offset < 0)
+            x = x_offset;
     }
     else
     {
         x = upper_histo[1];
+        if(x+x_offset >= input_img.cols)
+            x = input_img.cols - 1 - x_offset;
     }
 
-    assert(x - x_offset > 0 && x - x_offset + width < input_img.cols);
+    assert(x - x_offset >= 0);
+    assert(x - x_offset + width < input_img.cols);
     int y_tmp = 0;
     int y = input_img.rows - y_offset;
 
     for (int i = 0; i < num_windows; ++i)
     {
         //find all indizes of white pixels --> so we can compute the mean of them later
+        std::cout << "nonzero" << " x: " << x << ", y: " << y << std::endl;
         findNonZero(Mat(input_img, Rect(x - x_offset, y - y_offset, width, height)), non_zero);
-
+        std::cout << "nonzero done" << std::endl;
 #ifndef NDEBUG
 //rectangle(input_img, Rect(x-x_offset, y-y_offset, width-2, height-2), Scalar(255));
 #endif
@@ -286,6 +288,7 @@ static void multiple_windows_search_(Mat &input_img, const int num_windows, cons
                 x_tmp = x;
                 y_tmp = y;
             }
+            std::cout << "multiple_window no white pixels found" << std::endl;
         }
 
 #ifndef NDEBUG
@@ -297,25 +300,29 @@ static void multiple_windows_search_(Mat &input_img, const int num_windows, cons
         //move search window one step down
         y -= height;
         x = x_tmp;
+        //if new search coordinates are not in the image, set them back to the image
+        if(x+x_offset >= input_img.cols)
+            x = input_img.cols - 1 - x_offset;
+        if(x-x_offset < 0)
+            x = x_offset;
 
         non_zero.clear();
     }
 }
 
-
-static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &coeff)
+static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &coeff, const int order)
 {
-    std::cout << "poly reg start" << std::endl;
+    assert(points.size() >= order+1);
     coeff.clear();
     const int num_points = points.size();
-    Mat lhs = Mat_<double>(num_points, num_points);
+    Mat lhs = Mat_<double>(num_points, order+1);
     Mat rhs = Mat(num_points, 1, CV_64F);
     Mat solution = Mat_<double>();
 
     //constructs simple matrix (not Vandermonde matrix)
     for (int i = 0; i < num_points; ++i)
     {
-        for (int j = 0; j < num_points; ++j)
+        for (int j = 0; j <= order; ++j)
         {
             lhs.at<double>(i, j) = std::pow((double)points[i].y, j);
         }
@@ -324,12 +331,12 @@ static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &c
     for (int i = 0; i < num_points; ++i)
         rhs.at<double>(i) = points[i].x;
 
-    solve(lhs, rhs, solution);
+    solve(lhs, rhs, solution, DECOMP_QR);
 
     const double *sol = solution.ptr<double>();
     //coeff.resize(num_points);
     //coeff.insert(coeff.begin(), sol[0], sol[num_points-1]);
-    for (int i = 0; i < num_points; ++i)
+    for (int i = 0; i <= order; ++i)
         coeff.push_back(sol[i]);
 }
 
@@ -348,7 +355,6 @@ void alm_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &rig
     alm_conversion_(left_points);
     alm_conversion_(right_points);
 }
-
 
 void bird_view(const Mat &input_img, Mat &output_img, double rel_height, double rel_left, double rel_right, Mat *transform)
 {
@@ -378,12 +384,11 @@ void draw_curve(Mat &image, const std::vector<Point> &left_points, const std::ve
     draw_curve_(image, right_points);
 }
 
-void draw_poly(Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff)
+void draw_poly(Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order)
 {
-    draw_poly_(image, left_coeff);
-    draw_poly_(image, right_coeff);
+    draw_poly_(image, left_coeff, order);
+    draw_poly_(image, right_coeff, order);
 }
-
 
 void gabor(Mat &image)
 {
@@ -443,8 +448,20 @@ void h_sobel(Mat &image)
 
 void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
                       std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
-                      int lines_max, int roi_start, int roi_end, double min_theta, double max_theta)
+                      int lines_max, int roi_start, int roi_end, const bool b_view, double min_theta, double max_theta)
 {
+
+    //Additional parameters, that can be changed, but make everything way more complicated
+    //Tuning them is too much work for this scope
+    //filters out relativley horizontal lines (only accepts "steep" angles between [0, angle_roi*pi] and [(1-angle_roi)*pi, pi])
+    const double angle_roi = 0.2;
+    //Similar to angle_roi, but now only for b_view == true
+    //Since the searched for lanes in the Birdview perspective are steeper, b_angle_roi < angle_roi
+    const double b_angle_roi = 0.1;
+    //only needed if b_view == true. Relative width of one side to look for lines for the respective left or right lane. 
+    //Left lane is searched in [0, b_roi_widht*width]; Right lanes is searched in [(1-b_roi_width)*width, widht].
+    const double b_roi_width = 0.55;
+
     int i, j;
     float irho = 1 / rho;
 
@@ -462,6 +479,7 @@ void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
     int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
 
+//opencv stuff --> can be ignored
 #if defined HAVE_IPP && IPP_VERSION_X100 >= 810 && !IPP_DISABLE_HOUGH
     CV_IPP_CHECK()
     {
@@ -491,15 +509,20 @@ void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
     }
 #endif
 
+    //_accum_addtional used for b_view == true optimizations
+    //b_view == false uses only _accum (yes, then we waste the space for _accum_additional...)
     AutoBuffer<int> _accum((numangle + 2) * (numrho + 2));
+    AutoBuffer<int> _accum_additional((numangle + 2) * (numrho + 2));
     std::vector<int> _sort_buf_right;
     std::vector<int> _sort_buf_left;
     AutoBuffer<float> _tabSin(numangle);
     AutoBuffer<float> _tabCos(numangle);
     int *accum = _accum;
+    int *accum_additional = _accum_additional;
     float *tabSin = _tabSin, *tabCos = _tabCos;
 
     memset(accum, 0, sizeof(accum[0]) * (numangle + 2) * (numrho + 2));
+    memset(accum_additional, 0, sizeof(accum_additional[0]) * (numangle + 2) * (numrho + 2));
 
     float ang = static_cast<float>(min_theta);
     for (int n = 0; n < numangle; ang += theta, n++)
@@ -509,40 +532,105 @@ void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
     }
 
     // stage 1. fill accumulator
-    for (i = roi_start; i < roi_end; i++)
-        for (j = 0; j < width; j++)
-        {
-            if (image[i * step + j] != 0)
-                for (int n = 0; n < numangle; n++)
-                {
-                    //radius = distance to line
-                    int r = cvRound(j * tabCos[n] + i * tabSin[n]);
-                    r += (numrho - 1) / 2;
-                    accum[(n + 1) * (numrho + 2) + r + 1]++;
-                }
-        }
+    if (b_view)
+    {
+        //left side in accum
+        for (i = roi_start; i < roi_end; i++)
+            for (j = 0; j < b_roi_width*width; j++)
+            {
+                if (image[i * step + j] != 0)
+                    for (int n = 0; n < numangle; n++)
+                    {
+                        //radius = distance to line
+                        int r = cvRound(j * tabCos[n] + i * tabSin[n]);
+                        r += (numrho - 1) / 2;
+                        accum[(n + 1) * (numrho + 2) + r + 1]++;
+                    }
+            }
+        //right side in accum_additional
+        for (i = roi_start; i < roi_end; i++)
+            for (j = (1.-b_roi_width)*width; j < width; j++)
+            {
+                if (image[i * step + j] != 0)
+                    for (int n = 0; n < numangle; n++)
+                    {
+                        //radius = distance to line
+                        int r = cvRound(j * tabCos[n] + i * tabSin[n]);
+                        r += (numrho - 1) / 2;
+                        accum_additional[(n + 1) * (numrho + 2) + r + 1]++;
+                    }
+            }
+    }
+    else
+    {
+        for (i = roi_start; i < roi_end; i++)
+            for (j = 0; j < width; j++)
+            {
+                if (image[i * step + j] != 0)
+                    for (int n = 0; n < numangle; n++)
+                    {
+                        //radius = distance to line
+                        int r = cvRound(j * tabCos[n] + i * tabSin[n]);
+                        r += (numrho - 1) / 2;
+                        accum[(n + 1) * (numrho + 2) + r + 1]++;
+                    }
+            }
+    }
 
     // stage 2. find local maximums
-    //horizontal lines (~0.5*pi = 90°) are excluded
-    //0.1 as angle_roi and 0.9 for relatively steep (= vertical) lanes --> good for birdseye view
-    const double angle_roi = 0.2;
-    for (int r = 0; r < numrho; r++)
+    if (b_view)
     {
-        for (int n = 0; n < angle_roi * numangle; n++)
+        for (int r = 0; r < numrho; r++)
         {
-            int base = (n + 1) * (numrho + 2) + r + 1;
-            if (accum[base] > threshold &&
-                accum[base] > accum[base - 1] && accum[base] >= accum[base + 1] &&
-                accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2])
-                _sort_buf_left.push_back(base);
+            for (int n = 0; n < b_angle_roi * numangle; n++)
+            {
+                int base = (n + 1) * (numrho + 2) + r + 1;
+                if (accum[base] > threshold &&
+                    accum[base] > accum[base - 1] && accum[base] >= accum[base + 1] &&
+                    accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2])
+                    _sort_buf_left.push_back(base);
+                if (accum_additional[base] > threshold &&
+                    accum_additional[base] > accum_additional[base - 1] && accum_additional[base] >= accum_additional[base + 1] &&
+                    accum_additional[base] > accum_additional[base - numrho - 2] && accum_additional[base] >= accum_additional[base + numrho + 2])
+                    _sort_buf_right.push_back(base);
+            }
+            for (int n = (1. - b_angle_roi) * numangle; n < numangle; n++)
+            {
+                int base = (n + 1) * (numrho + 2) + r + 1;
+                if (accum[base] > threshold &&
+                    accum[base] > accum[base - 1] && accum[base] >= accum[base + 1] &&
+                    accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2])
+                    _sort_buf_left.push_back(base);
+                if (accum_additional[base] > threshold &&
+                    accum_additional[base] > accum_additional[base - 1] && accum_additional[base] >= accum_additional[base + 1] &&
+                    accum_additional[base] > accum_additional[base - numrho - 2] && accum_additional[base] >= accum_additional[base + numrho + 2])
+                    _sort_buf_right.push_back(base);
+            }
         }
-        for (int n = (1. - angle_roi) * numangle; n < numangle; n++)
+    }
+    else
+    {
+        //horizontal lines (~0.5*pi = 90°) are excluded
+        //right leaning lines are added to _sort_buf_left
+        //left leaning lines are added to _sort_buf_right
+        for (int r = 0; r < numrho; r++)
         {
-            int base = (n + 1) * (numrho + 2) + r + 1;
-            if (accum[base] > threshold &&
-                accum[base] > accum[base - 1] && accum[base] >= accum[base + 1] &&
-                accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2])
-                _sort_buf_right.push_back(base);
+            for (int n = 0; n < angle_roi * numangle; n++)
+            {
+                int base = (n + 1) * (numrho + 2) + r + 1;
+                if (accum[base] > threshold &&
+                    accum[base] > accum[base - 1] && accum[base] >= accum[base + 1] &&
+                    accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2])
+                    _sort_buf_left.push_back(base);
+            }
+            for (int n = (1. - angle_roi) * numangle; n < numangle; n++)
+            {
+                int base = (n + 1) * (numrho + 2) + r + 1;
+                if (accum[base] > threshold &&
+                    accum[base] > accum[base - 1] && accum[base] >= accum[base + 1] &&
+                    accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2])
+                    _sort_buf_right.push_back(base);
+            }
         }
     }
 
@@ -608,7 +696,7 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
     multiple_windows_search_(input_img, num_windows, width, right_points, false);
 }
 
-void partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines)
+void partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, const bool b_view)
 {
     left_lines.clear();
     right_lines.clear();
@@ -616,7 +704,7 @@ void partitioned_hough(const Mat &img, const int *part_coords, const int num_par
     std::vector<Vec2f> right_lines_tmp;
     for (int i = 0; i < num_part; ++i)
     {
-        HoughLinesCustom(img, 1., CV_PI / 180., 10, left_lines_tmp, right_lines_tmp, num_lines, part_coords[i], part_coords[i + 1]);
+        HoughLinesCustom(img, 1., CV_PI / 180., 10, left_lines_tmp, right_lines_tmp, num_lines, part_coords[i], part_coords[i + 1], b_view);
         left_lines.insert(left_lines.end(), left_lines_tmp.begin(), left_lines_tmp.end());
         right_lines.insert(right_lines.end(), right_lines_tmp.begin(), right_lines_tmp.end());
         left_lines_tmp.clear();
@@ -625,19 +713,18 @@ void partitioned_hough(const Mat &img, const int *part_coords, const int num_par
 }
 
 //TODO change Point to Point2f and test
-void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points, std::vector<double> &left_coeff, std::vector<double> &right_coeff)
+void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points, std::vector<double> &left_coeff, std::vector<double> &right_coeff, const int order)
 {
-    poly_reg_(left_points, left_coeff);
-    poly_reg_(right_points, right_coeff);
+    poly_reg_(left_points, left_coeff, order);
+    poly_reg_(right_points, right_coeff, order);
 }
-
 
 void show_image(String image_name, Mat &image, bool wait)
 {
-	namedWindow(image_name, WINDOW_AUTOSIZE);
-	imshow(image_name, image);
-	if (wait)
-		waitKey(0);
+    namedWindow(image_name, WINDOW_AUTOSIZE);
+    imshow(image_name, image);
+    if (wait)
+        waitKey(0);
 }
 
 void sub_partition(int start, int end, int number, bool equidistant, int *coords)

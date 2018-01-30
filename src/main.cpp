@@ -45,25 +45,28 @@ int main(int argc, char **argv)
 	const double ROI_START = 0.6;
 	const int NUM_PART = 5;
 	const int NUM_LINES = 3;
+	const bool B_VIEW = true;
 	const double B_OFFSET_MID = 0.04;
 	const double B_OFFSET = 0.4;
 	const double B_offset2 = 0.05;
 	const double B_HEIGHT = ROI_START; //or: ROI_START
 	const int W_NUM_WINDOWS = 10;
 	const int W_WIDTH = 40;
+	const int ORDER = 5;
 
 	//#############################################################################################
 	//######################################### Program ###########################################
 	//#############################################################################################
 
+	if(B_VIEW){
 	const Point2f b_p1[4] = {Point2f((0.5 - B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows), Point2f((0.5 + B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows), Point2f((0.5 + B_OFFSET_MID + B_OFFSET) * image.cols, image.rows), Point2f((0.5 - B_OFFSET_MID - B_OFFSET) * image.cols, image.rows)};
 	const Point2f b_p2[4] = {Point2f((0.5 - B_OFFSET_MID - B_offset2) * image.cols, 0), Point2f((0.5 + B_OFFSET_MID + B_offset2) * image.cols, 0), Point2f((0.5 + B_OFFSET_MID + B_offset2) * image.cols, image.rows), Point2f((0.5 - B_OFFSET_MID - B_offset2) * image.cols, image.rows)};
 	const Mat b_mat = getPerspectiveTransform(b_p1, b_p2);
 	const Mat b_inv_mat = getPerspectiveTransform(b_p2, b_p1);
 	warpPerspective(image, bird, b_mat, Size(image.cols, image.rows));
 	show_image("bird", bird, true);
-
-	/* //IMPORTANT!!!
+	}
+	/* //IMPORTANT Bird View !!!
 	std::vector<Point2f> points_in_bird_view = {Point2f(1,1), Point2f(300,200)};
 	std::vector<Point2f> out;
 	perspectiveTransform(points_in_bird_view, out, b_inv_mat);
@@ -115,7 +118,7 @@ int main(int argc, char **argv)
 	//HoughLinesCustom(processed, 1, CV_PI / 180., 10, lines, NUM_LINES, 0, processed.rows);
 	std::vector<Vec2f> h_left_lines;
 	std::vector<Vec2f> h_right_lines;
-	partitioned_hough(processed, coords_part, NUM_PART, NUM_LINES, h_left_lines, h_right_lines);
+	partitioned_hough(processed, coords_part, NUM_PART, NUM_LINES, h_left_lines, h_right_lines, B_VIEW);
 	std::cout << "hough_end" << std::endl;
 	std::cout << "num_lines soll: " << NUM_PART * NUM_LINES * 2 << ", num_lines ist: " << h_left_lines.size() << " + " << h_right_lines.size() << std::endl;
 	std::vector<Point2f> h_left_points;
@@ -124,12 +127,12 @@ int main(int argc, char **argv)
 	Mat tmp = processed.clone();
 	for (unsigned int i = 0; i < h_left_points.size(); ++i)
 	{
-		//line(tmp, h_left_points[i], h_left_points[i], Scalar(255), 7, CV_AA);
+		line(tmp, h_left_points[i], h_left_points[i], Scalar(255), 7, CV_AA);
 	}
-	//show_image("tmp l points", tmp, true);
+	show_image("tmp l points", tmp, true);
 	for (unsigned int i = 0; i < h_right_points.size(); ++i)
 	{
-		//line(tmp, h_right_points[i], h_right_points[i], Scalar(255), 7, CV_AA);
+		line(tmp, h_right_points[i], h_right_points[i], Scalar(255), 7, CV_AA);
 	}
 	show_image("tmp r points", tmp, true);
 
@@ -193,7 +196,7 @@ int main(int argc, char **argv)
 	std::vector<double> right_coeff;
 	std::vector<double> left_coeff;
 
-	poly_reg(h_left_points, h_right_points, left_coeff, right_coeff);
+	poly_reg(h_left_points, h_right_points, left_coeff, right_coeff, ORDER);
 
 
 	std::cout << "left coeff: ";
@@ -207,7 +210,7 @@ int main(int argc, char **argv)
 	}
 	std::cout << std::endl;
 
-	draw_poly(processed, left_coeff, right_coeff);
+	draw_poly(processed, left_coeff, right_coeff, ORDER);
 	show_image("drawn", processed, true);
 
 

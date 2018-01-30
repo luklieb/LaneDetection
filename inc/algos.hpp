@@ -73,7 +73,7 @@ void draw_curve(Mat &image, const std::vector<Point> &left_points, const std::ve
  * @param left_coeff Holds the coefficients for the left lane polynomial
  * @param right_coeff Holds the coefficients for the right lane polynomial
  */
-void draw_poly(Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff);
+void draw_poly(Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order);
 
 /**
  * Creates a Gabor kernel and applies it to the input image for edge detection
@@ -118,8 +118,9 @@ void h_sobel(Mat &image);
  * @param left_lines Vector returning the found lines_max lines (in rho and theta) of the left side
  * @param right_lines Vector returning the found lines_max lines (in rho and theta) of the right side
  * @param lines_max Number of lines to be found per side
- * @param h_start Start of the horizontal region of interest in pixels (probably from sub_partition())
- * @param h_end End of the horizontal region of interest in pixels (probably from sub_partition())
+ * @param roi_start Start of the horizontal region of interest in pixels (probably from sub_partition())
+ * @param roi_end End of the horizontal region of interest in pixels (probably from sub_partition())
+ * @param b_view If true, Hough Transformation is slightly optimized for the bird-view-perspective
  * @param min_theta Should be 0
  * @param max_theta Should be CV_PI
  * @note be aware that if the current line is similar (parrallel) to the previous line it gets ignored
@@ -131,7 +132,7 @@ void h_sobel(Mat &image);
  */
 void HoughLinesCustom(const Mat &img, float rho, float theta,
                       int threshold, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
-                      int linesMax, int roi_start, int roi_end, double min_theta = 0, double max_theta = CV_PI);
+                      int linesMax, int roi_start, int roi_end, const bool b_view, double min_theta = 0, double max_theta = CV_PI);
 
 /**
  * Takes the histogram of the upper half of the image as a startig point for 
@@ -154,11 +155,12 @@ void multiple_windows_search(Mat &input_img, const int num_windows, const int wi
  * @param num_lines Number of lines per partition per side 
  * @param left_lines Vector holding the polar coordinates of the detected lines on the left side (lane)
  * @param right_lines Vector holding the polar coordinates of the detected lines on the right side (lane)
+ * @param b_view If true, Hough Transformation is slightly optimized for the bird-view-perspective
  * @note [left/right]_lines stores at the beginning num_lines lines of the first partition,
  * 		at the end num_lines lines of the last partition
  */
 void partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines,
-                       std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines);
+                       std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, const bool b_view);
 
 /**
  * Takes an input vector of points and does a polynomal regression on it
@@ -168,7 +170,7 @@ void partitioned_hough(const Mat &img, const int *part_coords, const int num_par
  * @note See here: http://mathworld.wolfram.com/LeastSquaresFittingPolynomial.html
  */
 void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points, 
-                std::vector<double> &left_coeff, std::vector<double> &right_coeff);
+                std::vector<double> &left_coeff, std::vector<double> &right_coeff, const int order);
 
 /**
  * Helper function to show an image
