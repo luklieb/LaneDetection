@@ -21,3 +21,6 @@ make
 
 ```build/``` enthält die Binary und die zum Testen verwendeten Bilder in ```build/testbilder```
 
+
+## Zusätzliche Infos
+Zusätzliche Infos über das Projekt erhält man im [SDI/wikis/Fahrspurerkennungs](https://i3gitlab.informatik.uni-erlangen.de/SDI/SDI/wikis/Fahrspurerkennung) Wiki
