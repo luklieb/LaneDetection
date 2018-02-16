@@ -371,8 +371,9 @@ void bird_view(const Mat &input_img, Mat &output_img, double rel_height, double 
 void canny_blur(Mat &image)
 {
     //original: low_threshold=50, kernel_size=3: smooth, but many left out edges
-    int low_threshold = 350;
-    int kernel_size = 5;
+    //birdview: 350, 5
+    int low_threshold = 100;
+    int kernel_size = 3;
     blur(image, image, Size(3, 3));
     Canny(image, image, low_threshold, low_threshold * 3, kernel_size);
 }
@@ -454,7 +455,7 @@ void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
     //Additional parameters, that can be changed, but make everything way more complicated
     //Tuning them is too much work for this scope
     //filters out relativley horizontal lines (only accepts "steep" angles between [0, angle_roi*pi] and [(1-angle_roi)*pi, pi])
-    const double angle_roi = 0.2;
+    const double angle_roi = 0.4;
     //Similar to angle_roi, but now only for b_view == true
     //Since the searched for lanes in the Birdview perspective are steeper, b_angle_roi < angle_roi
     const double b_angle_roi = 0.1;
@@ -654,7 +655,7 @@ void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
         int r = idx - (n + 1) * (numrho + 2) - 1;
         line.rho = (r - (numrho - 1) * 0.5f) * rho;
         line.angle = static_cast<float>(min_theta) + n * theta;
-        std::cout << "i: " << i << ", last: " << last_angle << ", lineangle: " << line.angle << std::endl;
+        //std::cout << "i: " << i << ", last: " << last_angle << ", lineangle: " << line.angle << std::endl;
         if (i > 0 && line.angle >= last_angle - range && line.angle <= last_angle + range)
         {
             std::cout << "continue" << std::endl;
@@ -676,7 +677,7 @@ void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
         int r = idx - (n + 1) * (numrho + 2) - 1;
         line.rho = (r - (numrho - 1) * 0.5f) * rho;
         line.angle = static_cast<float>(min_theta) + n * theta;
-        std::cout << "i: " << i << ", last: " << last_angle << ", lineangle: " << line.angle << std::endl;
+        //std::cout << "i: " << i << ", last: " << last_angle << ", lineangle: " << line.angle << std::endl;
         if (i > 0 && line.angle >= last_angle - range && line.angle <= last_angle + range)
         {
             std::cout << "continue" << std::endl;
@@ -707,6 +708,9 @@ void partitioned_hough(const Mat &img, const int *part_coords, const int num_par
         HoughLinesCustom(img, 1., CV_PI / 180., 10, left_lines_tmp, right_lines_tmp, num_lines, part_coords[i], part_coords[i + 1], b_view);
         left_lines.insert(left_lines.end(), left_lines_tmp.begin(), left_lines_tmp.end());
         right_lines.insert(right_lines.end(), right_lines_tmp.begin(), right_lines_tmp.end());
+        std::cout << "part left size: " << left_lines_tmp.size() << ", part right size: " << right_lines_tmp.size() << ", part-coords i+1: " << part_coords[i+1] << std::endl;
+        assert(left_lines_tmp.size() == (unsigned int) num_lines);
+        assert(right_lines_tmp.size() == (unsigned int) num_lines);
         left_lines_tmp.clear();
         right_lines_tmp.clear();
     }

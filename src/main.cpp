@@ -17,7 +17,6 @@ using namespace cv;
  * h: high, l: low
  */
 
-
 int main(int argc, char **argv)
 {
 	char *image_name = argv[1];
@@ -43,28 +42,45 @@ int main(int argc, char **argv)
 	//######################################### Parameter File ####################################
 	//#############################################################################################
 	const double ROI_START = 0.6;
-	const int NUM_PART = 5;
+	const int NUM_PART = 2;
 	const int NUM_LINES = 3;
-	const bool B_VIEW = true;
+	const bool B_VIEW = false;
+	int P_START;
+	if (B_VIEW)
+	{
+		P_START = 0;
+		//TODO add canny edge parameters
+	}
+	else
+	{
+		P_START = ROI_START * image.rows;
+	}
 	const double B_OFFSET_MID = 0.04;
 	const double B_OFFSET = 0.4;
 	const double B_offset2 = 0.05;
 	const double B_HEIGHT = ROI_START; //or: ROI_START
 	const int W_NUM_WINDOWS = 10;
 	const int W_WIDTH = 40;
-	const int ORDER = 5;
+	const int ORDER = 1; //or NUM_PART-1
 
 	//#############################################################################################
 	//######################################### Program ###########################################
 	//#############################################################################################
 
-	if(B_VIEW){
-	const Point2f b_p1[4] = {Point2f((0.5 - B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows), Point2f((0.5 + B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows), Point2f((0.5 + B_OFFSET_MID + B_OFFSET) * image.cols, image.rows), Point2f((0.5 - B_OFFSET_MID - B_OFFSET) * image.cols, image.rows)};
-	const Point2f b_p2[4] = {Point2f((0.5 - B_OFFSET_MID - B_offset2) * image.cols, 0), Point2f((0.5 + B_OFFSET_MID + B_offset2) * image.cols, 0), Point2f((0.5 + B_OFFSET_MID + B_offset2) * image.cols, image.rows), Point2f((0.5 - B_OFFSET_MID - B_offset2) * image.cols, image.rows)};
-	const Mat b_mat = getPerspectiveTransform(b_p1, b_p2);
-	const Mat b_inv_mat = getPerspectiveTransform(b_p2, b_p1);
-	warpPerspective(image, bird, b_mat, Size(image.cols, image.rows));
-	show_image("bird", bird, true);
+	if (B_VIEW)
+	{
+		const Point2f b_p1[4] = {Point2f((0.5 - B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows), Point2f((0.5 + B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows), Point2f((0.5 + B_OFFSET_MID + B_OFFSET) * image.cols, image.rows), Point2f((0.5 - B_OFFSET_MID - B_OFFSET) * image.cols, image.rows)};
+		const Point2f b_p2[4] = {Point2f((0.5 - B_OFFSET_MID - B_offset2) * image.cols, 0), Point2f((0.5 + B_OFFSET_MID + B_offset2) * image.cols, 0), Point2f((0.5 + B_OFFSET_MID + B_offset2) * image.cols, image.rows), Point2f((0.5 - B_OFFSET_MID - B_offset2) * image.cols, image.rows)};
+		const Mat b_mat = getPerspectiveTransform(b_p1, b_p2);
+		const Mat b_inv_mat = getPerspectiveTransform(b_p2, b_p1);
+		warpPerspective(image, processed, b_mat, Size(image.cols, image.rows));
+		show_image("bird", processed, true);
+		cvtColor(processed, processed, COLOR_BGR2GRAY);
+	}
+	else
+	{
+		cvtColor(image, processed, COLOR_BGR2GRAY);
+
 	}
 	/* //IMPORTANT Bird View !!!
 	std::vector<Point2f> points_in_bird_view = {Point2f(1,1), Point2f(300,200)};
@@ -73,11 +89,14 @@ int main(int argc, char **argv)
 	*/
 
 	int coords_part[NUM_PART + 1];
-	sub_partition(0, image.rows, NUM_PART, true, coords_part);
+	sub_partition(P_START, image.rows, NUM_PART, true, coords_part);
 	for (auto c : coords_part)
+	{
 		std::cout << c << std::endl;
+		line(processed, Point(50, c), Point(50, c), Scalar(255), 5);
+	}
 
-	cvtColor(bird, processed, COLOR_BGR2GRAY);
+
 
 	show_image("roi", processed, true);
 	//h_sobel(processed);
@@ -86,6 +105,7 @@ int main(int argc, char **argv)
 	show_image("canny", processed, true);
 	std::vector<Point2f> w_left_points;
 	std::vector<Point2f> w_right_points;
+	/*
 	std::cout << "multiple" << std::endl;
 	multiple_windows_search(processed, W_NUM_WINDOWS, W_WIDTH, w_left_points, w_right_points);
 	std::cout << "multiple done" << std::endl;
@@ -105,7 +125,9 @@ int main(int argc, char **argv)
 	//line(processed, Point(histo_points[1], 100), Point(histo_points[1], 100), Scalar(255), 5, CV_AA);
 	//show_image("histo", processed, true);
 	window_search(processed, histo_points, W_WIDTH, w_left_points, w_right_points);
-	/*for (auto p : w_left_points)
+	*/
+	/*
+	for (auto p : w_left_points)
 		line(processed, p, p, Scalar(255), 5, CV_AA);
 	for (auto p : w_right_points)
 		line(processed, p, p, Scalar(255), 5, CV_AA);
@@ -125,15 +147,25 @@ int main(int argc, char **argv)
 	std::vector<Point2f> h_right_points;
 	get_points(h_left_lines, h_right_lines, NUM_LINES, coords_part, h_left_points, h_right_points);
 	Mat tmp = processed.clone();
+	std::cout << "hough left:" << std::endl;
 	for (unsigned int i = 0; i < h_left_points.size(); ++i)
 	{
 		line(tmp, h_left_points[i], h_left_points[i], Scalar(255), 7, CV_AA);
+		std::cout << h_left_points[i];
+		if ((i + 1) % (NUM_LINES * 2) == 0)
+			std::cout << std::endl;
 	}
+	std::cout << std::endl;
 	show_image("tmp l points", tmp, true);
+	std::cout << "hough right:" << std::endl;
 	for (unsigned int i = 0; i < h_right_points.size(); ++i)
 	{
 		line(tmp, h_right_points[i], h_right_points[i], Scalar(255), 7, CV_AA);
+		std::cout << h_right_points[i];
+		if ((i + 1) % (NUM_LINES * 2) == 0)
+			std::cout << std::endl;
 	}
+	std::cout << std::endl;
 	show_image("tmp r points", tmp, true);
 
 	std::cout << "alm" << std::endl;
@@ -175,12 +207,14 @@ int main(int argc, char **argv)
 	show_image("converted alm r points", processed, true);
 
 	std::cout << "left points: ";
-	for(auto p:h_left_points){
+	for (auto p : h_left_points)
+	{
 		std::cout << p << ", ";
 	}
 	std::cout << std::endl;
 	std::cout << "right points: ";
-	for(auto p:h_right_points){
+	for (auto p : h_right_points)
+	{
 		std::cout << p << ", ";
 	}
 	std::cout << std::endl;
@@ -190,7 +224,7 @@ int main(int argc, char **argv)
 	h_left_points.push_back(Point2f(0,0));
 	h_left_points.push_back(Point2f(-1,1));
 	*/
-	
+
 	//TODO draw poly function wrong
 
 	std::vector<double> right_coeff;
@@ -198,22 +232,22 @@ int main(int argc, char **argv)
 
 	poly_reg(h_left_points, h_right_points, left_coeff, right_coeff, ORDER);
 
-
 	std::cout << "left coeff: ";
-	for(auto c:left_coeff){
+	for (auto c : left_coeff)
+	{
 		std::cout << c << ", ";
 	}
-	std::cout << std::endl << "right coeff: ";
+	std::cout << std::endl
+			  << "right coeff: ";
 
-	for(auto c:right_coeff){
+	for (auto c : right_coeff)
+	{
 		std::cout << c << ", ";
 	}
 	std::cout << std::endl;
 
 	draw_poly(processed, left_coeff, right_coeff, ORDER);
 	show_image("drawn", processed, true);
-
-
 
 	std::cout << "end" << std::endl;
 
