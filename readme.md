@@ -1,7 +1,9 @@
 # Fahrspurerkennung für den Raspberry Pi
 Verschiedene Algorithmen, für die Fahrspurerkennung in C++
 
-Basierend auf OpenCV (Bibliothek muss vorhanden sein)
+Basierend auf OpenCV (Version 3.3.1_1  muss vorhanden sein)
+
+Für die Evaluation in ```eval/``` muss eine OpenCV Version 2.4.13.5 und Python Version 2.7.10 vorhanden sein
 
 ## Projekt bauen
 
@@ -21,6 +23,7 @@ make
 
 ```build/``` enthält die Binary und die zum Testen verwendeten Bilder in ```build/testbilder```
 
+```eval/``` enthält die Evaluationstools und  passende Evaluationsbilder (inklusive der korrekten "Lösung" (Ground Truth))  um die Kennzahlen zu berechnen
 
 ## Zusätzliche Infos
 Zusätzliche Infos über das Projekt erhält man im [SDI/wikis/Fahrspurerkennungs](https://i3gitlab.informatik.uni-erlangen.de/SDI/SDI/wikis/Fahrspurerkennung) Wiki
