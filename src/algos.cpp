@@ -177,6 +177,7 @@ static void draw_curve_(Mat &image, const std::vector<Point> &points)
 
 static void draw_poly_(Mat &image, const std::vector<double> &coeff, const int order)
 {
+    assert(coeff.size() == (unsigned int)order+1);
     double column = 0.;
     for (int r = 0; r < image.rows; ++r)
     {
@@ -312,7 +313,7 @@ static void multiple_windows_search_(Mat &input_img, const int num_windows, cons
 
 static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &coeff, const int order)
 {
-    assert(points.size() >= order+1);
+    assert(points.size() >= (unsigned int)order + 1);
     coeff.clear();
     const int num_points = points.size();
     Mat lhs = Mat_<double>(num_points, order+1);
@@ -721,6 +722,30 @@ void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f
 {
     poly_reg_(left_points, left_coeff, order);
     poly_reg_(right_points, right_coeff, order);
+}
+
+void print_result(const Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order, const String dir, const String file)
+{
+    //new red image
+    assert(left_coeff.size() == right_coeff.size() == order);
+    Mat result (image.rows, image.cols, CV_8UC3, Scalar(0,0,255));
+    int start = 0, end = 0;
+
+    for(int r = 0; r < image.rows; ++r)
+    {
+        for (int c = 0; c <= order; ++c)
+        {
+            start += std::pow(r, c) * left_coeff[c];
+            end += std::pow(r, c) * right_coeff[c];
+        }
+        if(start <= end)
+        {
+            line(result, Point(start,r), Point(end,r), Scalar(255,0,255));
+        }
+        start = 0;
+        end = 0;
+    }
+    imwrite(dir + file, result);
 }
 
 void show_image(String image_name, Mat &image, bool wait)

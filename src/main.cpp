@@ -2,6 +2,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "algos.hpp"
+#include "helper.hpp"
 
 using namespace cv;
 
@@ -17,19 +18,23 @@ using namespace cv;
  * h: high, l: low
  */
 
+
+
 int main(int argc, char **argv)
 {
 	if (argc != 4)
 	{
-		printf("not right amount of args\n Call like this: ./mapra <input_directory_path> <input_file_name> <result_directory_path");
+		printf("not right amount of args\n Call like this:\
+			./mapra <input_directory_path> <input_file_name> <result_directory_path\n");
 		return 1;
 	}
-	String input_dir = argv[1];
+	String input_dir = modify_dir(argv[1]);
 	String input_file = argv[2];
-	String result_dir = argv[3];
-	String image_name = input_dir + input_file;
+	String result_dir = modify_dir(argv[3]);
+	std::cout << input_dir << ", " << result_dir << std::endl;
+	String image_location = input_dir + input_file;
 	Mat image, processed, bird;
-	image = imread(image_name, 1);
+	image = imread(image_location, 1);
 	Mat mask = Mat(Size(image.cols, image.rows), image.type());
 	if (!image.data)
 	{
@@ -253,6 +258,7 @@ int main(int argc, char **argv)
 
 	draw_poly(processed, left_coeff, right_coeff, ORDER);
 	show_image("drawn", processed, true);
+	print_result(processed, left_coeff, right_coeff, ORDER, result_dir, input_file);
 
 	std::cout << "end" << std::endl;
 

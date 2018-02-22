@@ -6,7 +6,7 @@
 #include <iostream>
 #include <numeric>
 #include <cmath>
-#include <String>
+#include <string>
 
 using namespace cv;
 
@@ -73,6 +73,7 @@ void draw_curve(Mat &image, const std::vector<Point> &left_points, const std::ve
  * @param image Image to be drawn on
  * @param left_coeff Holds the coefficients for the left lane polynomial
  * @param right_coeff Holds the coefficients for the right lane polynomial
+ * @param order Order of polynomial (e.g. for quadradic polynomials the order is 2)
  */
 void draw_poly(Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order);
 
@@ -172,6 +173,18 @@ void partitioned_hough(const Mat &img, const int *part_coords, const int num_par
  */
 void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points, 
                 std::vector<double> &left_coeff, std::vector<double> &right_coeff, const int order);
+
+/**
+ * Saves an color coded image after lane detection for the evaluation in file evaluate.py
+ * @note OpenCV uses BGR -> non-lane areas colored in red => (0,0,255), lane areas in pink => (255,0,255) 
+ * @param image Used for correct output image sizes
+ * @param left_coeff Coefficients for the polynomial describing the left boundary of the lane
+ * @param right_coeff Coefficients for the polynomial describing the right boundary of the lane
+ * @param order Order of polynomials
+ * @param dir Path where the resulting image should be stored
+ * @param file File name of the resulting image
+ */
+void print_result(const Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order, const String dir, const String file);
 
 /**
  * Helper function to show an image

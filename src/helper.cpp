@@ -18,18 +18,6 @@ void ParameterReader::read(const std::string &filename) {
     parameters.close();
 }
 
-template <typename T>
-T ParameterReader::get_value(const std::string &key) {
-    if (data.count(key) == 0) {
-        std::cerr << "Key: " << key << ",does not exist." << std::endl;
-        return "-1";
-    } else {
-        T param;
-        std::istringstream ss(data.at(key));
-        ss >> param;
-        return param;
-    }
-}
 
 
 
