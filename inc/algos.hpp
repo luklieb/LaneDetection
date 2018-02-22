@@ -6,6 +6,7 @@
 #include <iostream>
 #include <numeric>
 #include <cmath>
+#include <String>
 
 using namespace cv;
 

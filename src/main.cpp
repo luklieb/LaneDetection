@@ -19,14 +19,22 @@ using namespace cv;
 
 int main(int argc, char **argv)
 {
-	char *image_name = argv[1];
+	if (argc != 4)
+	{
+		printf("not right amount of args\n Call like this: ./mapra <input_directory_path> <input_file_name> <result_directory_path");
+		return 1;
+	}
+	String input_dir = argv[1];
+	String input_file = argv[2];
+	String result_dir = argv[3];
+	String image_name = input_dir + input_file;
 	Mat image, processed, bird;
 	image = imread(image_name, 1);
 	Mat mask = Mat(Size(image.cols, image.rows), image.type());
-	if (argc != 2 || !image.data)
+	if (!image.data)
 	{
-		printf(" No image data \n ");
-		return -1;
+		printf("No image data\n");
+		return 1;
 	}
 
 	//#############################################################################################
@@ -80,7 +88,6 @@ int main(int argc, char **argv)
 	else
 	{
 		cvtColor(image, processed, COLOR_BGR2GRAY);
-
 	}
 	/* //IMPORTANT Bird View !!!
 	std::vector<Point2f> points_in_bird_view = {Point2f(1,1), Point2f(300,200)};
@@ -95,8 +102,6 @@ int main(int argc, char **argv)
 		std::cout << c << std::endl;
 		line(processed, Point(50, c), Point(50, c), Scalar(255), 5);
 	}
-
-
 
 	show_image("roi", processed, true);
 	//h_sobel(processed);
