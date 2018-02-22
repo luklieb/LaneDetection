@@ -23,6 +23,8 @@ import os
 import cv2
 import sys
 
+#print("%s" %cv2.__file__)
+#print("%s" %cv2.__version__)
 
 def getGroundTruth(fileNameGT):
     '''
@@ -31,7 +33,7 @@ def getGroundTruth(fileNameGT):
     '''
     # Read GT
     assert os.path.isfile(fileNameGT), 'Cannot find: %s' % fileNameGT
-    full_gt = cv2.imread(fileNameGT, cv2.CV_LOAD_IMAGE_UNCHANGED)
+    full_gt = cv2.imread(fileNameGT, cv2.IMREAD_UNCHANGED)
     #attention: OpenCV reads in as BGR, so first channel has Blue / road GT
     roadArea =  full_gt[:,:,0] > 0
     validArea = full_gt[:,:,2] > 0
