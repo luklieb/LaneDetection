@@ -20,11 +20,11 @@ def call_binary(image):
     out, err = proc.communicate
     exitcode = proc.returncode
     if (exitcode == -1):
-        print("algorithm could not detect a lane")
+        print("algorithm could not detect a lane in file %s" %image)
     if (exitcode == 0):
-        print("algorithm detected a lane")
+        print("algorithm detected a lane in file %s" %image)
     if (exitcode == 1):
-        print("algorithm crashed")
+        print("algorithm crashed in file %s" %image)
     return exitcode
     
 

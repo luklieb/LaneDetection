@@ -79,14 +79,22 @@ struct hough_cmp_gt
     const int *aux;
 };
 
+static int inline check_codes(int code1, int code2)
+{
+    if(code1 == MAPRA_ERROR || code2 == MAPRA_ERROR)
+        return MAPRA_ERROR;
+    if(code1 == MAPRA_WARNING || code2 == MAPRA_WARNING)
+        return MAPRA_WARNING;
+    return MAPRA_SUCCESS;
+}
+
 //#############################################################################################
 //######################################### STATIC FCTS #######################################
 //#############################################################################################
 
-static void alm_(std::vector<Point2f> &points, const int &num_part, const int &num_lines)
+static int alm_(std::vector<Point2f> &points, const int &num_part, const int &num_lines)
 {
     assert(points.size() % 2 == 0);
-    //assert(points.size() == 2u * num_part * num_lines);
 
     std::vector<std::vector<Point2f>> possible_points(num_lines);
     double error_sum[num_lines];
@@ -95,6 +103,9 @@ static void alm_(std::vector<Point2f> &points, const int &num_part, const int &n
     Point2f start_pt;
     Point2f end_pt;
 
+    //there are num_lines in each partition
+    //iterate over almost all line segment combinations to determine an error norm
+    //(skip the ones where the new error norm is already larger than the error_tmp nrom)
     for (int l = 0; l < num_lines; ++l)
     {
         error_sum[0] = 0.;
@@ -121,6 +132,7 @@ static void alm_(std::vector<Point2f> &points, const int &num_part, const int &n
             possible_points[l].push_back(points[line_tmp * 2 + 1]);
         }
     }
+    //choose the line combination (over the num_part partitions) with the lowest error norm
     error_tmp = std::numeric_limits<double>::infinity();
     int index_tmp = -1;
     for (int i = 0; i < num_lines; ++i)
@@ -131,11 +143,16 @@ static void alm_(std::vector<Point2f> &points, const int &num_part, const int &n
             index_tmp = i;
         }
     }
+    //store the best (lowest error norm) line combinations in the original vector
     points.clear();
     points.insert(points.begin(), possible_points[index_tmp].begin(), possible_points[index_tmp].end());
+    
+    if(points.size() != 2*num_part)
+        return MAPRA_WARNING;
+    return MAPRA_SUCCESS;
 }
 
-void alm_conversion_(std::vector<Point2f> &points)
+static int alm_conversion_(std::vector<Point2f> &points)
 {
     //copy
     std::vector<Point2f> cpy(points);
@@ -151,6 +168,9 @@ void alm_conversion_(std::vector<Point2f> &points)
     }
     //last point can stay
     points.push_back(cpy[size - 1]);
+    if(points.size() %2 != 0)
+        return MAPRA_WARNING;
+    return MAPRA_SUCCESS;
 }
 
 //deprecated
@@ -190,15 +210,20 @@ static void draw_poly_(Mat &image, const std::vector<double> &coeff, const int o
     }
 }
 
-static void get_points_(const std::vector<Vec2f> &lines, const int &num_lines, const int *coords_part, std::vector<Point2f> &points)
+static int get_points_(const std::vector<Vec2f> &lines, const int &num_lines, const int &num_part, const int *coords_part, std::vector<Point2f> &points)
 {
     points.clear();
     int i = 0;
     int j = 0;
     Point2f pt1, pt2;
+    //iterate over all lines
+    //there are always num_lines in each num_part
+    //transform one line in polar coordinates (2 variables (roh, phi)) to one start point 
+    //and one end point in cartesian coordiantes (2 variables (x,y) each)
     for (auto p : lines)
     {
-        //std::cout << p[0] << ", " << p[1] / CV_PI << std::endl;
+        if(i>=num_part)
+            break;
         float rho = p[0], theta = p[1];
         double a = cos(theta), b = sin(theta), a_inv = 1. / a;
         pt1.y = coords_part[i];
@@ -208,21 +233,27 @@ static void get_points_(const std::vector<Vec2f> &lines, const int &num_lines, c
         points.push_back(pt1);
         points.push_back(pt2);
         ++j;
+        //after num_lines continue with next partition
         if (j % num_lines == 0)
             ++i;
     }
+    assert(points.size() == num_part*num_lines*2);
+    if(points.size() != num_part*num_lines*2)
+        return MAPRA_WARNING;
+    return MAPRA_SUCCESS;
 }
 
-static void multiple_windows_search_(Mat &input_img, const int num_windows, const int width, std::vector<Point2f> &points, const bool left)
+static int multiple_windows_search_(Mat &input_img, const int num_windows, const int width, std::vector<Point2f> &points, const bool left)
 {
 
     int upper_histo[2];
     points.clear();
     //has to be of type Point
     std::vector<Point> non_zero;
-    //only take upper half of input_img into consideration
-    std::cout << "histo " << std::endl;
-    h_histogram(Mat(input_img, Rect(0, 0.5 * input_img.rows, input_img.cols, 0.5 * input_img.rows)), upper_histo);
+    //only take upper half of input_img (0.5*input_img.rows) into consideration
+    int code = h_histogram(Mat(input_img, Rect(0, 0.5 * input_img.rows, input_img.cols, 0.5 * input_img.rows)), upper_histo);
+    if(code != MAPRA_SUCCESS)
+        return code;
     std::cout << "histo done: " << upper_histo[0] << ", " << upper_histo[1] << std::endl;
     //offsets from center points of window
     const int height = input_img.rows / num_windows;
@@ -250,13 +281,10 @@ static void multiple_windows_search_(Mat &input_img, const int num_windows, cons
 
     for (int i = 0; i < num_windows; ++i)
     {
-        //find all indizes of white pixels --> so we can compute the mean of them later
+        //find all indizes of white (non black) pixels --> so we can compute the mean of them later
         std::cout << "nonzero" << " x: " << x << ", y: " << y << std::endl;
         findNonZero(Mat(input_img, Rect(x - x_offset, y - y_offset, width, height)), non_zero);
         std::cout << "nonzero done" << std::endl;
-#ifndef NDEBUG
-//rectangle(input_img, Rect(x-x_offset, y-y_offset, width-2, height-2), Scalar(255));
-#endif
 
         x_tmp = 0;
         y_tmp = 0;
@@ -283,32 +311,35 @@ static void multiple_windows_search_(Mat &input_img, const int num_windows, cons
                 y_tmp = y;
                 x_tmp = x - (height * slope);
             }
-            //if not, move up in a straight line
-            else
+            else //if not, move up in a straight line
             {
                 x_tmp = x;
                 y_tmp = y;
             }
+            #ifndef NDEBUG
             std::cout << "multiple_window no white pixels found" << std::endl;
+            #endif
         }
-
-#ifndef NDEBUG
-//line(input_img, Point(x_tmp, y_tmp), Point(x_tmp, y_tmp), Scalar(255));
-#endif
 
         points.push_back(Point2f(x_tmp, y_tmp));
 
         //move search window one step down
         y -= height;
         x = x_tmp;
-        //if new search coordinates are not in the image, set them back to the image
+        //if new search coordinates are not in the image, they are probably not part of a road lane
+        assert(x+x_offset < input_img.cols);
         if(x+x_offset >= input_img.cols)
-            x = input_img.cols - 1 - x_offset;
+            return MAPRA_WARNING;
+        assert(x-x_offset >= 0);
         if(x-x_offset < 0)
-            x = x_offset;
+            return MAPRA_WARNING;
 
         non_zero.clear();
     }
+    assert(points.size() == num_windows);
+    if(points.size() != num_windows)
+        return MAPRA_WARNING;
+    return MAPRA_SUCCESS;
 }
 
 static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &coeff, const int order)
@@ -345,16 +376,18 @@ static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &c
 //######################################### INTERFACE #########################################
 //#############################################################################################
 
-void alm(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int &num_part, const int &num_lines)
+int alm(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int &num_part, const int &num_lines)
 {
-    alm_(left_points, num_part, num_lines);
-    alm_(right_points, num_part, num_lines);
+    int code1 = alm_(left_points, num_part, num_lines);
+    int code2 = alm_(right_points, num_part, num_lines);
+    return check_codes(code1, code2);
 }
 
-void alm_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int alm_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
-    alm_conversion_(left_points);
-    alm_conversion_(right_points);
+    int code1 = alm_conversion_(left_points);
+    int code2 = alm_conversion_(right_points);
+    return check_codes(code1, code2);
 }
 
 void bird_view(const Mat &input_img, Mat &output_img, double rel_height, double rel_left, double rel_right, Mat *transform)
@@ -409,13 +442,14 @@ void gabor(Mat &image)
     filter2D(image, image, CV_64F, kernel);
 }
 
-void get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int &num_lines, const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int &num_lines, const int &num_part, const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
-    get_points_(left_lines, num_lines, coords_part, left_points);
-    get_points_(right_lines, num_lines, coords_part, right_points);
+    int code1 = get_points_(left_lines, num_lines, num_part, coords_part, left_points);
+    int code2 = get_points_(right_lines, num_lines, num_part, coords_part, right_points);
+    return check_codes(code1, code2);
 }
 
-void h_histogram(const Mat &input_img, int *x_points)
+int h_histogram(const Mat &input_img, int *x_points)
 {
     std::vector<int> histo;
     //"sums up" along y-axis for each column -> returns a "row vector"
@@ -423,7 +457,7 @@ void h_histogram(const Mat &input_img, int *x_points)
     int m1 = 0;
     int m2 = 0;
     x_points[0] = -1;
-    x_points[0] = -1;
+    x_points[1] = -1;
     for (size_t i = 0; i < 0.5 * histo.size(); ++i)
     {
         if (histo[i] > m1)
@@ -440,6 +474,10 @@ void h_histogram(const Mat &input_img, int *x_points)
             x_points[1] = i;
         }
     }
+    assert(x_points[0] != -1 && x_points[1] != -1 && x_points[0]<=x_points[1]);
+    if(x_points[0] == -1 || x_points[1] == -1 || x_points[0]>x_points[1])
+        return MAPRA_WARNING;
+    return MAPRA_SUCCESS;
 }
 
 void h_sobel(Mat &image)
@@ -448,19 +486,19 @@ void h_sobel(Mat &image)
     Sobel(image, image, -1, 1, 0);
 }
 
-void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
+int HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
                       std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
                       int lines_max, int roi_start, int roi_end, const bool b_view, double min_theta, double max_theta)
 {
 
     //Additional parameters, that can be changed, but make everything way more complicated
-    //Tuning them is too much work for this scope
-    //filters out relativley horizontal lines (only accepts "steep" angles between [0, angle_roi*pi] and [(1-angle_roi)*pi, pi])
+    //Automaticly tuning them is too much work for this scope
+    //Filters out relativley horizontal lines (only accepts "steep" angles between [0, angle_roi*pi] and [(1-angle_roi)*pi, pi])
     const double angle_roi = 0.4;
     //Similar to angle_roi, but now only for b_view == true
     //Since the searched for lanes in the Birdview perspective are steeper, b_angle_roi < angle_roi
     const double b_angle_roi = 0.1;
-    //only needed if b_view == true. Relative width of one side to look for lines for the respective left or right lane. 
+    //Only needed if b_view == true. Relative width of one side to look for lines for the respective left or right lane. 
     //Left lane is searched in [0, b_roi_widht*width]; Right lanes is searched in [(1-b_roi_width)*width, widht].
     const double b_roi_width = 0.55;
 
@@ -477,6 +515,7 @@ void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
     if (max_theta < min_theta)
     {
         CV_Error(CV_StsBadArg, "max_theta must be greater than min_theta");
+        return MAPRA_ERROR;
     }
     int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
@@ -543,7 +582,7 @@ void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
                 if (image[i * step + j] != 0)
                     for (int n = 0; n < numangle; n++)
                     {
-                        //radius = distance to line
+                        //radius = shortest (perpendicular) distance to line
                         int r = cvRound(j * tabCos[n] + i * tabSin[n]);
                         r += (numrho - 1) / 2;
                         accum[(n + 1) * (numrho + 2) + r + 1]++;
@@ -563,7 +602,7 @@ void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
                     }
             }
     }
-    else
+    else //normal view
     {
         for (i = roi_start; i < roi_end; i++)
             for (j = 0; j < width; j++)
@@ -610,7 +649,7 @@ void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
             }
         }
     }
-    else
+    else //normal view
     {
         //horizontal lines (~0.5*pi = 90°) are excluded
         //right leaning lines are added to _sort_buf_left
@@ -656,7 +695,6 @@ void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
         int r = idx - (n + 1) * (numrho + 2) - 1;
         line.rho = (r - (numrho - 1) * 0.5f) * rho;
         line.angle = static_cast<float>(min_theta) + n * theta;
-        //std::cout << "i: " << i << ", last: " << last_angle << ", lineangle: " << line.angle << std::endl;
         if (i > 0 && line.angle >= last_angle - range && line.angle <= last_angle + range)
         {
             std::cout << "continue" << std::endl;
@@ -690,44 +728,55 @@ void HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
         ++i;
         ++j;
     }
+    assert(left_lines.size() == lines_max && right_lines.size() == lines_max);
+    if(left_lines.size() != lines_max || right_lines.size() != lines_max)
+        return MAPRA_WARNING;
+    return MAPRA_SUCCESS;
 }
 
-void multiple_windows_search(Mat &input_img, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int multiple_windows_search(Mat &input_img, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
-    multiple_windows_search_(input_img, num_windows, width, left_points, true);
-    multiple_windows_search_(input_img, num_windows, width, right_points, false);
+    int code1 = multiple_windows_search_(input_img, num_windows, width, left_points, true);
+    int code2 = multiple_windows_search_(input_img, num_windows, width, right_points, false);
+    return check_codes(code1, code2);
 }
 
-void partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, const bool b_view)
+int partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, const bool b_view)
 {
     left_lines.clear();
     right_lines.clear();
     std::vector<Vec2f> left_lines_tmp;
     std::vector<Vec2f> right_lines_tmp;
+    int code;
     for (int i = 0; i < num_part; ++i)
     {
-        HoughLinesCustom(img, 1., CV_PI / 180., 10, left_lines_tmp, right_lines_tmp, num_lines, part_coords[i], part_coords[i + 1], b_view);
+        code = HoughLinesCustom(img, 1., CV_PI / 180., 10, left_lines_tmp, right_lines_tmp, num_lines, part_coords[i], part_coords[i + 1], b_view);
+        if(code != MAPRA_SUCCESS)
+            return code;
         left_lines.insert(left_lines.end(), left_lines_tmp.begin(), left_lines_tmp.end());
         right_lines.insert(right_lines.end(), right_lines_tmp.begin(), right_lines_tmp.end());
         std::cout << "part left size: " << left_lines_tmp.size() << ", part right size: " << right_lines_tmp.size() << ", part-coords i+1: " << part_coords[i+1] << std::endl;
-        assert(left_lines_tmp.size() == (unsigned int) num_lines);
-        assert(right_lines_tmp.size() == (unsigned int) num_lines);
+        assert(left_lines_tmp.size() == (unsigned int) num_lines && right_lines_tmp.size() == (unsigned int) num_lines);
+        if(left_lines_tmp.size() != num_lines || right_lines_tmp.size() != num_lines )
+            return MAPRA_WARNING;
         left_lines_tmp.clear();
         right_lines_tmp.clear();
     }
+    return MAPRA_SUCCESS;
 }
 
-//TODO change Point to Point2f and test
 void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points, std::vector<double> &left_coeff, std::vector<double> &right_coeff, const int order)
 {
     poly_reg_(left_points, left_coeff, order);
     poly_reg_(right_points, right_coeff, order);
 }
 
-void print_result(const Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order, const String dir, const String file)
+int store_result(const Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order, const String dir, const String file)
 {
     //new red image
     assert(left_coeff.size() == right_coeff.size() == order);
+    if(left_coeff.size() != right_coeff.size() != order)
+        return MAPRA_ERROR;
     Mat result (image.rows, image.cols, CV_8UC3, Scalar(0,0,255));
     int start = 0, end = 0;
 
@@ -746,6 +795,7 @@ void print_result(const Mat &image, const std::vector<double> &left_coeff, const
         end = 0;
     }
     imwrite(dir + file, result);
+    return MAPRA_SUCCESS;
 }
 
 void show_image(String image_name, Mat &image, bool wait)
@@ -783,17 +833,20 @@ void v_roi(Mat &img, const double &start)
     rectangle(img, Point(0, 0), Point(img.cols, img.rows * start), Scalar(0), CV_FILLED);
 }
 
-void window_search(const Mat &img, const int *input_points, const int &window_width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int window_search(const Mat &img, const int *input_points, const int &window_width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
 
     left_points.clear();
     right_points.clear();
-    left_points.insert(left_points.begin(), 3, Point2f(-1, -1));
-    right_points.insert(right_points.begin(), 3, Point2f(-1, -1));
+    Point2f check_point (-1,-1);
+    left_points.insert(left_points.begin(), 3, check_point);
+    right_points.insert(right_points.begin(), 3, check_point);
     const uchar *image = img.ptr();
     int low = 0.1 * img.rows, mid = 0.5 * img.rows, up = 0.9 * img.rows;
     const int offset = 50;
     assert((low - offset >= 0) && (up + offset < img.rows));
+    if((low - offset < 0) || (up + offset >= img.rows))
+        return MAPRA_ERROR;
 
     for (int r = -offset; r < offset; ++r)
     {
@@ -813,4 +866,10 @@ void window_search(const Mat &img, const int *input_points, const int &window_wi
                 right_points[0] = Point2f(input_points[1] + c, (up + r));
         }
     }
+    for(int i = 0; i<3; ++i){
+        assert(left_points[i] != check_point && right_points[i] != check_point);
+        if(left_points[i] == check_point || right_points[i] == check_point)
+            return MAPRA_WARNING;
+    }
+    return MAPRA_SUCCESS;
 }

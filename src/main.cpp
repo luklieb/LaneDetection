@@ -151,11 +151,11 @@ int main(int argc, char **argv)
 	std::vector<Vec2f> h_left_lines;
 	std::vector<Vec2f> h_right_lines;
 	partitioned_hough(processed, coords_part, NUM_PART, NUM_LINES, h_left_lines, h_right_lines, B_VIEW);
-	std::cout << "hough_end" << std::endl;
+	std::cout << "hough_end, " << h_left_lines[0] << std::endl;
 	std::cout << "num_lines soll: " << NUM_PART * NUM_LINES * 2 << ", num_lines ist: " << h_left_lines.size() << " + " << h_right_lines.size() << std::endl;
 	std::vector<Point2f> h_left_points;
 	std::vector<Point2f> h_right_points;
-	get_points(h_left_lines, h_right_lines, NUM_LINES, coords_part, h_left_points, h_right_points);
+	get_points(h_left_lines, h_right_lines, NUM_LINES, NUM_PART, coords_part, h_left_points, h_right_points);
 	Mat tmp = processed.clone();
 	std::cout << "hough left:" << std::endl;
 	for (unsigned int i = 0; i < h_left_points.size(); ++i)
@@ -178,7 +178,7 @@ int main(int argc, char **argv)
 	std::cout << std::endl;
 	show_image("tmp r points", tmp, true);
 
-	std::cout << "alm" << std::endl;
+	std::cout << "alm: " << h_left_points.size() << ", " << h_left_lines.size() << ", " << NUM_LINES << ", " << NUM_PART << std::endl;
 	alm(h_left_points, h_right_points, NUM_PART, NUM_LINES);
 	std::cout << "alm done" << std::endl;
 	std::cout << "alm lines is: " << h_right_points.size() << ", should: " << 2 * NUM_PART << std::endl;
@@ -258,7 +258,7 @@ int main(int argc, char **argv)
 
 	draw_poly(processed, left_coeff, right_coeff, ORDER);
 	show_image("drawn", processed, true);
-	print_result(processed, left_coeff, right_coeff, ORDER, result_dir, input_file);
+	store_result(processed, left_coeff, right_coeff, ORDER, result_dir, input_file);
 
 	std::cout << "end" << std::endl;
 
