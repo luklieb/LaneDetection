@@ -1,4 +1,5 @@
 #include <iostream>
+#include <functional>
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "algos.hpp"
@@ -100,6 +101,7 @@ int main(int argc, char **argv)
 	perspectiveTransform(points_in_bird_view, out, b_inv_mat);
 	*/
 
+
 	int coords_part[NUM_PART + 1];
 	sub_partition(P_START, image.rows, NUM_PART, true, coords_part);
 	for (auto c : coords_part)
@@ -115,6 +117,30 @@ int main(int argc, char **argv)
 	show_image("canny", processed, true);
 	std::vector<Point2f> w_left_points;
 	std::vector<Point2f> w_right_points;
+
+	int ps[2];
+	h_histogram(processed, 0, ps);
+	line(processed, Point(ps[0], 0.5*processed.rows),Point(ps[0], 0.5*processed.rows), Scalar(255), 8 );
+	line(processed, Point(ps[1], 0.5*processed.rows),Point(ps[1], 0.5*processed.rows), Scalar(255), 8 );
+	show_image("all before", processed, true);
+	h_histogram(processed, ROI_START, ps);
+	line(processed, Point(ps[0], 0.5*processed.rows),Point(ps[0], 0.5*processed.rows), Scalar(255), 8 );
+	line(processed, Point(ps[1], 0.5*processed.rows),Point(ps[1], 0.5*processed.rows), Scalar(255), 8 );
+	show_image("roi before", processed, true);
+	
+	line(processed, Point(0.4*processed.cols, 0), Point(0.41*processed.cols, 70), Scalar(255), 12);
+	line(processed, Point(0.6*processed.cols, 0), Point(0.61*processed.cols, 70), Scalar(255), 12);
+	
+	h_histogram(processed, 0, ps);
+	line(processed, Point(ps[0], 0.5*processed.rows),Point(ps[0], 0.5*processed.rows), Scalar(128), 8 );
+	line(processed, Point(ps[1], 0.5*processed.rows),Point(ps[1], 0.5*processed.rows), Scalar(128), 8 );
+	show_image("all after", processed, true);
+	h_histogram(processed, ROI_START, ps);
+	line(processed, Point(ps[0], 0.5*processed.rows),Point(ps[0], 0.5*processed.rows), Scalar(128), 8 );
+	line(processed, Point(ps[1], 0.5*processed.rows),Point(ps[1], 0.5*processed.rows), Scalar(128), 8 );
+	show_image("roi after", processed, true);
+
+
 	/*
 	std::cout << "multiple" << std::endl;
 	multiple_windows_search(processed, W_NUM_WINDOWS, W_WIDTH, w_left_points, w_right_points);
@@ -235,7 +261,6 @@ int main(int argc, char **argv)
 	h_left_points.push_back(Point2f(-1,1));
 	*/
 
-	//TODO draw poly function wrong
 
 	std::vector<double> right_coeff;
 	std::vector<double> left_coeff;
@@ -256,9 +281,9 @@ int main(int argc, char **argv)
 	}
 	std::cout << std::endl;
 
-	draw_poly(processed, left_coeff, right_coeff, ORDER);
+	draw_poly(processed, ROI_START, left_coeff, right_coeff, ORDER);
 	show_image("drawn", processed, true);
-	store_result(processed, left_coeff, right_coeff, ORDER, result_dir, input_file);
+	store_result(processed, ROI_START, left_coeff, right_coeff, ORDER, result_dir, input_file);
 
 	std::cout << "end" << std::endl;
 

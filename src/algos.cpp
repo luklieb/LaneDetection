@@ -92,7 +92,7 @@ static int inline check_codes(int code1, int code2)
 //######################################### STATIC FCTS #######################################
 //#############################################################################################
 
-static int alm_(std::vector<Point2f> &points, const int &num_part, const int &num_lines)
+static int alm_(std::vector<Point2f> &points, const int num_part, const int num_lines)
 {
     assert(points.size() % 2 == 0);
 
@@ -147,7 +147,7 @@ static int alm_(std::vector<Point2f> &points, const int &num_part, const int &nu
     points.clear();
     points.insert(points.begin(), possible_points[index_tmp].begin(), possible_points[index_tmp].end());
     
-    if(points.size() != 2*num_part)
+    if(points.size() != 2u*num_part)
         return MAPRA_WARNING;
     return MAPRA_SUCCESS;
 }
@@ -174,7 +174,7 @@ static int alm_conversion_(std::vector<Point2f> &points)
 }
 
 //deprecated
-static void draw_curve_(Mat &image, const std::vector<Point> &points)
+static void draw_curve_(Mat &image, const double roi, const std::vector<Point> &points)
 {
     assert(points.size() >= 3);
     uchar *img = image.ptr();
@@ -189,28 +189,36 @@ static void draw_curve_(Mat &image, const std::vector<Point> &points)
     solve(lhs, rhs, solution);
 
     const double *sol = solution.ptr<double>();
+    #ifndef NDEBUG
+    std::cout << "coeff for draw curve: ";
     for (unsigned int i = 0; i < points.size(); ++i)
         std::cout << sol[i] << ", " << std::endl;
-    for (int r = 0; r < image.rows; ++r)
+    #endif
+    for (int r = roi*image.rows; r < image.rows; ++r)
         img[r * image.cols + static_cast<int>((sol[0] * r * r + sol[1] * r + sol[2]))] = 128;
 }
 
-static void draw_poly_(Mat &image, const std::vector<double> &coeff, const int order)
+static void draw_poly_(Mat &image, const double roi, const std::vector<double> &coeff, const int order)
 {
     assert(coeff.size() == (unsigned int)order+1);
     double column = 0.;
-    for (int r = 0; r < image.rows; ++r)
+    for (int r = roi*image.rows; r < image.rows; ++r)
     {
         for (int c = 0; c <= order; ++c)
         {
             column += std::pow(r, c) * coeff[c];
         }
-        image.at<uchar>(r, static_cast<int>(column)) = 255;
+        //draw with a width of 5 pixels
+        image.at<uchar>(r, static_cast<int>(column-2)) = 128;
+        image.at<uchar>(r, static_cast<int>(column-1)) = 128;
+        image.at<uchar>(r, static_cast<int>(column)) = 128;
+        image.at<uchar>(r, static_cast<int>(column+1)) = 128;
+        image.at<uchar>(r, static_cast<int>(column+2)) = 128;
         column = 0.;
     }
 }
 
-static int get_points_(const std::vector<Vec2f> &lines, const int &num_lines, const int &num_part, const int *coords_part, std::vector<Point2f> &points)
+static int get_points_(const std::vector<Vec2f> &lines, const int num_lines, const int num_part, const int *coords_part, std::vector<Point2f> &points)
 {
     points.clear();
     int i = 0;
@@ -237,21 +245,20 @@ static int get_points_(const std::vector<Vec2f> &lines, const int &num_lines, co
         if (j % num_lines == 0)
             ++i;
     }
-    assert(points.size() == num_part*num_lines*2);
-    if(points.size() != num_part*num_lines*2)
+    assert(points.size() == 2u*num_part*num_lines);
+    if(points.size() != 2u*num_part*num_lines)
         return MAPRA_WARNING;
     return MAPRA_SUCCESS;
 }
 
-static int multiple_windows_search_(Mat &input_img, const int num_windows, const int width, std::vector<Point2f> &points, const bool left)
+static int multiple_windows_search_(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &points, const bool left)
 {
 
     int upper_histo[2];
     points.clear();
-    //has to be of type Point
+    //has to be of type Point. Stores the idizes of white (non-black) pixels
     std::vector<Point> non_zero;
-    //only take upper half of input_img (0.5*input_img.rows) into consideration
-    int code = h_histogram(Mat(input_img, Rect(0, 0.5 * input_img.rows, input_img.cols, 0.5 * input_img.rows)), upper_histo);
+    int code = h_histogram(input_img, roi, upper_histo);
     if(code != MAPRA_SUCCESS)
         return code;
     std::cout << "histo done: " << upper_histo[0] << ", " << upper_histo[1] << std::endl;
@@ -289,6 +296,7 @@ static int multiple_windows_search_(Mat &input_img, const int num_windows, const
         x_tmp = 0;
         y_tmp = 0;
 
+        //if non-black pixels are found
         if (non_zero.size() > 0)
         {
             //averages all coordinates of non-zero pixels --> new output coordinates
@@ -336,8 +344,8 @@ static int multiple_windows_search_(Mat &input_img, const int num_windows, const
 
         non_zero.clear();
     }
-    assert(points.size() == num_windows);
-    if(points.size() != num_windows)
+    assert(points.size() == (unsigned int)num_windows);
+    if(points.size() != (unsigned int) num_windows)
         return MAPRA_WARNING;
     return MAPRA_SUCCESS;
 }
@@ -376,7 +384,7 @@ static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &c
 //######################################### INTERFACE #########################################
 //#############################################################################################
 
-int alm(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int &num_part, const int &num_lines)
+int alm(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part, const int num_lines)
 {
     int code1 = alm_(left_points, num_part, num_lines);
     int code2 = alm_(right_points, num_part, num_lines);
@@ -390,7 +398,7 @@ int alm_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &righ
     return check_codes(code1, code2);
 }
 
-void bird_view(const Mat &input_img, Mat &output_img, double rel_height, double rel_left, double rel_right, Mat *transform)
+void bird_view(const Mat &input_img, Mat &output_img, const double rel_height, const double rel_left, const double rel_right)
 {
     double offset = 0.4;
     double offset2 = 0.05;
@@ -413,16 +421,16 @@ void canny_blur(Mat &image)
 }
 
 //deprecated
-void draw_curve(Mat &image, const std::vector<Point> &left_points, const std::vector<Point> &right_points)
+void draw_curve(Mat &image, const double roi, const std::vector<Point> &left_points, const std::vector<Point> &right_points)
 {
-    draw_curve_(image, left_points);
-    draw_curve_(image, right_points);
+    draw_curve_(image, roi, left_points);
+    draw_curve_(image, roi, right_points);
 }
 
-void draw_poly(Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order)
+void draw_poly(Mat &image, const double roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order)
 {
-    draw_poly_(image, left_coeff, order);
-    draw_poly_(image, right_coeff, order);
+    draw_poly_(image, roi, left_coeff, order);
+    draw_poly_(image, roi, right_coeff, order);
 }
 
 void gabor(Mat &image)
@@ -442,18 +450,19 @@ void gabor(Mat &image)
     filter2D(image, image, CV_64F, kernel);
 }
 
-int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int &num_lines, const int &num_part, const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines, const int num_part, const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
     int code1 = get_points_(left_lines, num_lines, num_part, coords_part, left_points);
     int code2 = get_points_(right_lines, num_lines, num_part, coords_part, right_points);
     return check_codes(code1, code2);
 }
 
-int h_histogram(const Mat &input_img, int *x_points)
+int h_histogram(const Mat &input_img, const double roi, int *x_points)
 {
     std::vector<int> histo;
     //"sums up" along y-axis for each column -> returns a "row vector"
-    reduce(input_img, histo, 0, CV_REDUCE_SUM);
+    //new Mat is the only the roi part of input_img
+    reduce(Mat(input_img, Range(roi*input_img.rows, input_img.rows)), histo, 0, CV_REDUCE_SUM);
     int m1 = 0;
     int m2 = 0;
     x_points[0] = -1;
@@ -486,9 +495,9 @@ void h_sobel(Mat &image)
     Sobel(image, image, -1, 1, 0);
 }
 
-int HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
+int HoughLinesCustom(const Mat &img, const float rho, const float theta, const int threshold,
                       std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
-                      int lines_max, int roi_start, int roi_end, const bool b_view, double min_theta, double max_theta)
+                      const int lines_max, const int roi_start, const int roi_end, const bool b_view, const double min_theta, const double max_theta)
 {
 
     //Additional parameters, that can be changed, but make everything way more complicated
@@ -728,16 +737,16 @@ int HoughLinesCustom(const Mat &img, float rho, float theta, int threshold,
         ++i;
         ++j;
     }
-    assert(left_lines.size() == lines_max && right_lines.size() == lines_max);
-    if(left_lines.size() != lines_max || right_lines.size() != lines_max)
+    assert(left_lines.size() == (unsigned int)lines_max && right_lines.size() == (unsigned int)lines_max);
+    if(left_lines.size() != (unsigned int)lines_max || right_lines.size() != (unsigned int)lines_max)
         return MAPRA_WARNING;
     return MAPRA_SUCCESS;
 }
 
-int multiple_windows_search(Mat &input_img, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int multiple_windows_search(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
-    int code1 = multiple_windows_search_(input_img, num_windows, width, left_points, true);
-    int code2 = multiple_windows_search_(input_img, num_windows, width, right_points, false);
+    int code1 = multiple_windows_search_(input_img, roi, num_windows, width, left_points, true);
+    int code2 = multiple_windows_search_(input_img, roi, num_windows, width, right_points, false);
     return check_codes(code1, code2);
 }
 
@@ -757,7 +766,7 @@ int partitioned_hough(const Mat &img, const int *part_coords, const int num_part
         right_lines.insert(right_lines.end(), right_lines_tmp.begin(), right_lines_tmp.end());
         std::cout << "part left size: " << left_lines_tmp.size() << ", part right size: " << right_lines_tmp.size() << ", part-coords i+1: " << part_coords[i+1] << std::endl;
         assert(left_lines_tmp.size() == (unsigned int) num_lines && right_lines_tmp.size() == (unsigned int) num_lines);
-        if(left_lines_tmp.size() != num_lines || right_lines_tmp.size() != num_lines )
+        if(left_lines_tmp.size() != (unsigned int)num_lines || right_lines_tmp.size() != (unsigned int)num_lines )
             return MAPRA_WARNING;
         left_lines_tmp.clear();
         right_lines_tmp.clear();
@@ -771,16 +780,16 @@ void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f
     poly_reg_(right_points, right_coeff, order);
 }
 
-int store_result(const Mat &image, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order, const String dir, const String file)
+int store_result(const Mat &image, const double &roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order, const String dir, const String file)
 {
     //new red image
-    assert(left_coeff.size() == right_coeff.size() == order);
-    if(left_coeff.size() != right_coeff.size() != order)
-        return MAPRA_ERROR;
+    assert(left_coeff.size() == right_coeff.size() && left_coeff.size() == 1u+order);
+    if(left_coeff.size() != right_coeff.size() || right_coeff.size() != 1u+order)
+       return MAPRA_ERROR;
     Mat result (image.rows, image.cols, CV_8UC3, Scalar(0,0,255));
     int start = 0, end = 0;
 
-    for(int r = 0; r < image.rows; ++r)
+    for(int r = roi*image.rows; r < image.rows; ++r)
     {
         for (int c = 0; c <= order; ++c)
         {
@@ -794,11 +803,14 @@ int store_result(const Mat &image, const std::vector<double> &left_coeff, const 
         start = 0;
         end = 0;
     }
+    #ifndef NDEBUG
+    std::cout << "File written to path: " << dir+file << std::endl;
+    #endif
     imwrite(dir + file, result);
     return MAPRA_SUCCESS;
 }
 
-void show_image(String image_name, Mat &image, bool wait)
+void show_image(const String image_name, const Mat &image, const bool wait)
 {
     namedWindow(image_name, WINDOW_AUTOSIZE);
     imshow(image_name, image);
@@ -806,7 +818,7 @@ void show_image(String image_name, Mat &image, bool wait)
         waitKey(0);
 }
 
-void sub_partition(int start, int end, int number, bool equidistant, int *coords)
+void sub_partition(const int start, const int end, const int number, const bool equidistant, int *coords)
 {
     assert(end > start);
     double factor = 1.;
@@ -828,12 +840,12 @@ void sub_partition(int start, int end, int number, bool equidistant, int *coords
     //coords[number] = end;
 }
 
-void v_roi(Mat &img, const double &start)
+void v_roi(Mat &img, const double start)
 {
     rectangle(img, Point(0, 0), Point(img.cols, img.rows * start), Scalar(0), CV_FILLED);
 }
 
-int window_search(const Mat &img, const int *input_points, const int &window_width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int window_search(const Mat &img, const int *input_points, const int window_width, const double roi, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
 
     left_points.clear();
@@ -842,8 +854,12 @@ int window_search(const Mat &img, const int *input_points, const int &window_wid
     left_points.insert(left_points.begin(), 3, check_point);
     right_points.insert(right_points.begin(), 3, check_point);
     const uchar *image = img.ptr();
-    int low = 0.1 * img.rows, mid = 0.5 * img.rows, up = 0.9 * img.rows;
-    const int offset = 50;
+    //3 search regions
+    const int low = 0.1*(1.-roi)*img.rows + roi*img.rows; 
+    const int mid = 0.5*(1.-roi)*img.rows + roi*img.rows;
+    const int up = 0.9*(1.-roi)*img.rows + roi*img.rows;
+    //half amount of pixels to search in vertical direction
+    const int offset = 0.1*(1.-roi)*img.rows - 1; 
     assert((low - offset >= 0) && (up + offset < img.rows));
     if((low - offset < 0) || (up + offset >= img.rows))
         return MAPRA_ERROR;
