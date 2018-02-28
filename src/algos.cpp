@@ -422,20 +422,25 @@ void canny_blur(Mat &image)
 
 void color_thres(Mat &image, const int thres)
 {
+    //convert to HLS color space
     cvtColor(image, image, COLOR_BGR2HLS);
-    //Range ranges [] = {Range(0,image.rows-100), Range(0,image.cols), Range(0,0)};
-    //image = Mat(image, ranges);
+    //binary (one channel) temporary Mat
     Mat tmp(image.rows, image.cols, CV_8UC1);
-    int from_to [] = {2,0};
+    //take channel 2 (L channel) and store in in first channel in new image
+    int from_to [] = {1,0};
+    //extract second channel from image and save to first channel of tmp
     mixChannels(&image, 1, &tmp, 1, from_to, 1);
+    //reshape from 3 channels to 1 channel in order to hold the newly created tmp
     image.reshape(1);
     image = tmp;
 
     double max_val;
+    //get maximum value from image
     minMaxLoc(image, (double *)0, &max_val);
+    //normalize image
     image *= (255./max_val);
+    //apply binary thresholding
     threshold(image, image, thres, 255, THRESH_BINARY);
-
 }
 
 //deprecated
