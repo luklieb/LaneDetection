@@ -58,7 +58,7 @@ int main(int argc, char **argv)
 	const double ROI_START = 0.6;
 	const int NUM_PART = 2;
 	const int NUM_LINES = 3;
-	const bool B_VIEW = false;
+	const bool B_VIEW = true;
 	int P_START;
 	if (B_VIEW)
 	{
@@ -77,16 +77,29 @@ int main(int argc, char **argv)
 	const int W_WIDTH = 40;
 	const int ORDER = 1; //or NUM_PART-1
 
+	Mat b_mat;
+	Mat b_inv_mat;
+	//mat from Kitti calib data 
+	//double mat [3][3] = {{9.999239000000e-01, 9.837760000000e-03, -7.445048000000e-03 }, {-9.869795000000e-03, 9.999421000000e-01, -4.278459000000e-03}, {7.402527000000e-03, 4.351614000000e-03, 9.999631000000e-01}};
+	
+	
 	//#############################################################################################
 	//######################################### Program ###########################################
 	//#############################################################################################
 
+	show_image("color", image, true);
+	color_thres(image);
+	show_image("only red", image, true);
+
 	if (B_VIEW)
 	{
+		//both trapezoids have to be adjusted according to the size of the input image and the ROI
+		//In the end both road lanes should be parallel in the Birds Eye View
 		const Point2f b_p1[4] = {Point2f((0.5 - B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows), Point2f((0.5 + B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows), Point2f((0.5 + B_OFFSET_MID + B_OFFSET) * image.cols, image.rows), Point2f((0.5 - B_OFFSET_MID - B_OFFSET) * image.cols, image.rows)};
 		const Point2f b_p2[4] = {Point2f((0.5 - B_OFFSET_MID - B_offset2) * image.cols, 0), Point2f((0.5 + B_OFFSET_MID + B_offset2) * image.cols, 0), Point2f((0.5 + B_OFFSET_MID + B_offset2) * image.cols, image.rows), Point2f((0.5 - B_OFFSET_MID - B_offset2) * image.cols, image.rows)};
-		const Mat b_mat = getPerspectiveTransform(b_p1, b_p2);
-		const Mat b_inv_mat = getPerspectiveTransform(b_p2, b_p1);
+		b_mat = getPerspectiveTransform(b_p1, b_p2);
+		b_inv_mat = getPerspectiveTransform(b_p2, b_p1);
+		//b_mat=Mat(Size(3,3), CV_64FC1, mat);
 		warpPerspective(image, processed, b_mat, Size(image.cols, image.rows));
 		show_image("bird", processed, true);
 		cvtColor(processed, processed, COLOR_BGR2GRAY);
@@ -109,6 +122,7 @@ int main(int argc, char **argv)
 		std::cout << c << std::endl;
 		line(processed, Point(50, c), Point(50, c), Scalar(255), 5);
 	}
+
 
 	show_image("roi", processed, true);
 	//h_sobel(processed);

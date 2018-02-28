@@ -73,6 +73,14 @@ void bird_view(const Mat &input_img, Mat &output_img, const double rel_height, c
  */
 void canny_blur(Mat &image);
 
+
+/**
+ * Edge detection by color thresholding in the HLS color space
+ * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
+ * @param thres Start threshold value for the L channel
+ */
+void color_thres(Mat &image, const int thres = 220);
+
 /**
  * @note Deprecated, replaced by poly_reg()
  * Takes three points, fits a quadratic curve to them and draws the curve on the image

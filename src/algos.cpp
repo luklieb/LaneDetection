@@ -420,6 +420,24 @@ void canny_blur(Mat &image)
     Canny(image, image, low_threshold, low_threshold * 3, kernel_size);
 }
 
+void color_thres(Mat &image, const int thres)
+{
+    cvtColor(image, image, COLOR_BGR2HLS);
+    //Range ranges [] = {Range(0,image.rows-100), Range(0,image.cols), Range(0,0)};
+    //image = Mat(image, ranges);
+    Mat tmp(image.rows, image.cols, CV_8UC1);
+    int from_to [] = {2,0};
+    mixChannels(&image, 1, &tmp, 1, from_to, 1);
+    image.reshape(1);
+    image = tmp;
+
+    double max_val;
+    minMaxLoc(image, (double *)0, &max_val);
+    image *= (255./max_val);
+    threshold(image, image, thres, 255, THRESH_BINARY);
+
+}
+
 //deprecated
 void draw_curve(Mat &image, const double roi, const std::vector<Point> &left_points, const std::vector<Point> &right_points)
 {
@@ -436,18 +454,23 @@ void draw_poly(Mat &image, const double roi, const std::vector<double> &left_coe
 void gabor(Mat &image)
 {
     //TODO passende parameter finden
-    int kernel_size = 50;
-    double sigma = 5;         //frequency bandwidth
+    int kernel_size = 40;
+    double sigma = 1;         //frequency bandwidth
     double theta = 0.;        //angle of gabor kernel --> 0 for vertical lines
     double lambda = 20.;      //double the lane width in pixles
-    double gamma = 0.;        //shape (circular or elliptical)
+    double gamma = 0.5;       //shape (1 = circular or [0,1) = elliptical)
     double psi = 0.5 * CV_PI; //phase offset
-    Mat kernel = getGaborKernel(Size(kernel_size, kernel_size), sigma, theta, lambda, gamma, psi, CV_32F);
-    //resize(kernel, kernel, Size(500,500), 0, 0);
-    //Mat img;
-    //normalize(kernel, img, 0, 1, NORM_MINMAX);
-    //show_image("bla", img, true);
-    filter2D(image, image, CV_64F, kernel);
+    Mat kernel1 = getGaborKernel(Size(kernel_size, kernel_size), sigma, theta, lambda, gamma, psi, CV_32F);
+    Mat kernel2 = getGaborKernel(Size(kernel_size, kernel_size), sigma, theta, lambda, gamma, 0, CV_32F);
+    #ifndef NDEBUG
+    Mat kernel3;
+    resize(kernel1, kernel3, Size(500,500), 0, 0);
+    Mat img;
+    normalize(kernel3, img, 0, 1, NORM_MINMAX);
+    show_image("Gabor Kernel enlarged", img, true);
+    #endif
+    filter2D(image, image, CV_32F, kernel2);
+    filter2D(image, image, CV_32F, kernel1);
 }
 
 int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines, const int num_part, const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
