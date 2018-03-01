@@ -203,6 +203,39 @@ int partitioned_hough(const Mat &img, const int *part_coords, const int num_part
 void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points, 
                 std::vector<double> &left_coeff, std::vector<double> &right_coeff, const int order);
 
+
+/**
+ * Helper function to show an image
+ * @param image_name for the window
+ * @param image to be shwon in window
+ * @param wait option to wait for a key input to close the window showing the image
+ */
+void show_image(const String image_name, const Mat &image, const bool wait);
+
+/**
+ * Edge detection by Sobel derivativ direction thresholding
+ * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
+ * @param thres_s First threshold in degrees. Directions +- 5° around it are searched
+ * @param thres_e Second threshold in degrees. Directions +- 5° around it are searched
+ */
+void sobel_dir_thres(Mat &image, const int thres_s = 90, const int thres_e = 180);
+
+/**
+ * Edge detection by Sobel magnitude thresholding
+ * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
+ * @param thres Threshold for the magnitude
+ */
+void sobel_mag_thres(Mat &image, const int thres = 155);
+
+/**
+ * Edge detection by Sobel derivative thresholding
+ * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
+ * @param thres_x Start threshold value for the derivatives in x direction
+ * @param thres_y Start threshold value for the derivatives in y direction
+ */
+void sobel_thres(Mat &image, const int thres_x = 10, const int thres_y = 60);
+
+
 /**
  * Saves an color coded image after lane detection for the evaluation in file evaluate.py
  * @note OpenCV uses BGR -> non-lane areas colored in red => (0,0,255), lane areas in pink => (255,0,255) 
@@ -217,13 +250,6 @@ void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f
  */
 int store_result(const Mat &image, const double &roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order, const String dir, const String file);
 
-/**
- * Helper function to show an image
- * @param image_name for the window
- * @param image to be shwon in window
- * @param wait option to wait for a key input to close the window showing the image
- */
-void show_image(const String image_name, const Mat &image, const bool wait);
 
 /**
  * Returns the (x or y) coordinates of the sub-domains

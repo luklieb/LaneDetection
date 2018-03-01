@@ -808,6 +808,100 @@ void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f
     poly_reg_(right_points, right_coeff, order);
 }
 
+
+
+void show_image(const String image_name, const Mat &image, const bool wait)
+{
+    namedWindow(image_name, WINDOW_AUTOSIZE);
+    imshow(image_name, image);
+    if (wait)
+        waitKey(0);
+}
+
+void sobel_dir_thres(Mat &image, const int thres_s, const int thres_e)
+{
+    //helper needed for temporary conversion to CV_32F from CV_8U
+    Mat tmp;
+    Mat tmp2;
+    Mat tmp3;
+    double max_val, min_val;
+    cvtColor(image, image, COLOR_BGR2GRAY);
+    blur(image, image, Size(3,3));
+    Mat image2 = image.clone();
+    //x
+    Sobel(image, tmp, CV_32F, 1, 0, 5);
+    //y
+    Sobel(image2, tmp2, CV_32F, 0, 1, 5);
+    //angle between x and y stored in tmp
+    phase(tmp, tmp2, tmp3, true);
+    //scales tmp3 from [0,360] to image with [0,255] and converts to 8 bit
+    convertScaleAbs(tmp3, image);
+    //remove (set to 0) all values over thres_e, leave other ones untouched
+    //scales the degrees of thres_e to [0,255]
+    threshold(image, image, (thres_s+5.)/360.*255., 0, THRESH_TOZERO_INV);
+    //remove (set to 0) all values under thres_s, leave other ones untouched
+    threshold(image, image, (thres_s-5.)/360.*255., 0, THRESH_TOZERO);
+    //threshold is 0 --> all values over 0 are set to 255
+    threshold(image, image, 0, 255, THRESH_BINARY);
+
+    convertScaleAbs(tmp3, image2);
+    threshold(image2, image2, (thres_e+5.)/360.*255., 0, THRESH_TOZERO_INV);
+    threshold(image2, image2, (thres_e-5.)/360.*255., 0, THRESH_TOZERO);
+    threshold(image2, image2, 0, 255, THRESH_BINARY);
+
+    bitwise_or(image, image2, image);
+}
+
+void sobel_mag_thres(Mat &image, const int thres)
+{
+    //helper needed for temporary conversion to CV_32F from CV_8U
+    Mat tmp;
+    Mat tmp2;
+    cvtColor(image, image, COLOR_BGR2GRAY);
+    blur(image, image, Size(3,3));
+    Mat image2 = image.clone();
+    //Sobel derivatives in x direction
+    Sobel(image, image, -1, 1, 0);
+    Sobel(image2, image2, -1, 0, 1);
+    image.convertTo(tmp, CV_32F);
+    image2.convertTo(tmp2, CV_32F);
+    //get magnitude of x and y derivaties
+    magnitude(tmp, tmp2, tmp);
+    tmp.convertTo(image, CV_8U);
+    double max_val;
+    //find max value in image
+    minMaxLoc(image, (double *)0, &max_val);
+    //normalize image
+    image *= (255./max_val);
+    threshold(image, image, thres, 255, THRESH_BINARY);
+}
+
+
+
+void sobel_thres(Mat &image, const int thres_x, const int thres_y)
+{
+    cvtColor(image, image, COLOR_BGR2GRAY);
+    blur(image, image, Size(3,3));
+    Mat image2 = image.clone();
+    //Sobel derivatives in x direction
+    Sobel(image, image, -1, 1, 0);
+    absdiff(image, Scalar::all(0), image);
+    double max_val;
+    //get maximum value from image
+    minMaxLoc(image, (double *)0, &max_val);
+    //normalize image
+    image *= (255./max_val);
+    threshold(image, image, thres_x, 255, THRESH_BINARY);
+    //same for image2 in y direction
+    Sobel(image2, image2, -1, 0, 1);
+    absdiff(image2, Scalar::all(0), image2);
+    minMaxLoc(image2, (double *)0, &max_val);
+    image2 *= (255./max_val);
+    threshold(image2, image2, thres_y, 255, THRESH_BINARY);
+    bitwise_and(image, image2, image);
+}
+
+
 int store_result(const Mat &image, const double &roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order, const String dir, const String file)
 {
     //new red image
@@ -836,14 +930,6 @@ int store_result(const Mat &image, const double &roi, const std::vector<double> 
     #endif
     imwrite(dir + file, result);
     return MAPRA_SUCCESS;
-}
-
-void show_image(const String image_name, const Mat &image, const bool wait)
-{
-    namedWindow(image_name, WINDOW_AUTOSIZE);
-    imshow(image_name, image);
-    if (wait)
-        waitKey(0);
 }
 
 void sub_partition(const int start, const int end, const int number, const bool equidistant, int *coords)

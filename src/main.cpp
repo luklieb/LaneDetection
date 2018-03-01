@@ -36,7 +36,7 @@ int main(int argc, char **argv)
 	String image_location = input_dir + input_file;
 	Mat image, processed, bird;
 	image = imread(image_location, 1);
-	Mat mask = Mat(Size(image.cols, image.rows), image.type());
+
 	if (!image.data)
 	{
 		printf("No image data\n");
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
 	//#############################################################################################
 
 	show_image("color", image, true);
-	color_thres(image);
+	sobel_dir_thres(image, 90, 180);
 	show_image("only red", image, true);
 
 	if (B_VIEW)
