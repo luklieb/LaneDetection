@@ -7,3 +7,4 @@ build/mapra
 .vscode/
 *.pyc
 *.Python
+launch.json

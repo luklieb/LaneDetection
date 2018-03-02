@@ -416,8 +416,12 @@ void canny_blur(Mat &image)
     //birdview: 350, 5
     int low_threshold = 100;
     int kernel_size = 3;
-    blur(image, image, Size(3, 3));
-    Canny(image, image, low_threshold, low_threshold * 3, kernel_size);
+    Mat proc;
+    line(image, Point(50, 100), Point(50, 100), Scalar(120, 255), 15);
+    cvtColor(image, proc, COLOR_BGR2GRAY);
+    line(proc, Point(0, 100), Point(0, 100), Scalar(255, 255), 15);
+    blur(proc, proc, Size(3, 3));
+    Canny(proc, image, low_threshold, low_threshold * 3, kernel_size);
 }
 
 void color_thres(Mat &image, const int thres)
@@ -771,6 +775,40 @@ int HoughLinesCustom(const Mat &img, const float rho, const float theta, const i
     return MAPRA_SUCCESS;
 }
 
+
+void multi_filter(Mat &image, std::vector<int> algos)
+{
+    assert(*std::max_element(algos.begin(), algos.end())<=5 && *std::min_element(algos.begin(), algos.end())>=1);
+    using namespace std::placeholders;
+
+    std::vector<std::pair<std::function<void(Mat &)>, Mat>> fct_calls;
+    if(any_of(algos.begin(), algos.end(), [](int i){return i == 1;}))
+        fct_calls.push_back(std::make_pair(canny_blur, image.clone()));
+    if (any_of(algos.begin(), algos.end(), [](int i) { return i == 2; }))
+        fct_calls.push_back(std::make_pair(std::bind([](Mat &i) { sobel_dir_thres(i); }, _1), image.clone()));
+    if (any_of(algos.begin(), algos.end(), [](int i) { return i == 3; }))
+        fct_calls.push_back(std::make_pair(std::bind([](Mat &i) { sobel_mag_thres(i); }, _1), image.clone()));
+    if (any_of(algos.begin(), algos.end(), [](int i) { return i == 4; }))
+        fct_calls.push_back(std::make_pair(std::bind([](Mat &i) { sobel_par_thres(i); }, _1), image.clone()));
+    if (any_of(algos.begin(), algos.end(), [](int i) { return i == 5; }))
+        fct_calls.push_back(std::make_pair(std::bind([](Mat &i) { color_thres(i); }, _1), image.clone()));
+
+    for(auto &f : fct_calls)
+        f.first(f.second);
+
+    cvtColor(image, image, COLOR_BGR2GRAY);
+    image = Scalar(255);
+    int i = 0;
+    for(auto &f : fct_calls){
+        #ifndef NDEBUG
+        show_image("image", image, true);
+        show_image(std::to_string(i), f.second, true);
+        ++i;
+        #endif
+        bitwise_and(image, f.second, image);
+    }
+}
+
 int multiple_windows_search(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
     int code1 = multiple_windows_search_(input_img, roi, num_windows, width, left_points, true);
@@ -821,10 +859,10 @@ void show_image(const String image_name, const Mat &image, const bool wait)
 void sobel_dir_thres(Mat &image, const int thres_s, const int thres_e)
 {
     //helper needed for temporary conversion to CV_32F from CV_8U
+    line(image, Point(200, 200), Point(200, 200), Scalar(255), 15);
     Mat tmp;
     Mat tmp2;
     Mat tmp3;
-    double max_val, min_val;
     cvtColor(image, image, COLOR_BGR2GRAY);
     blur(image, image, Size(3,3));
     Mat image2 = image.clone();
@@ -878,7 +916,7 @@ void sobel_mag_thres(Mat &image, const int thres)
 
 
 
-void sobel_thres(Mat &image, const int thres_x, const int thres_y)
+void sobel_par_thres(Mat &image, const int thres_x, const int thres_y)
 {
     cvtColor(image, image, COLOR_BGR2GRAY);
     blur(image, image, Size(3,3));

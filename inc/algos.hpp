@@ -7,6 +7,8 @@
 #include <numeric>
 #include <cmath>
 #include <string>
+#include <functional>
+#include <algorithm>
 
 using namespace cv;
 
@@ -25,7 +27,7 @@ using namespace cv;
 
 /**
  * MAPRA_WARNING => Detected lanes probably wrong
- * MAPRA_SUCCESS => Actual lanes were found
+ * MAPRA_SUCCESS => Actual (correct) lanes were found
  * MAPRA_ERROR => Severe Error 
  */
 #define MAPRA_WARNING -1
@@ -69,7 +71,7 @@ void bird_view(const Mat &input_img, Mat &output_img, const double rel_height, c
 /**
  * Blurs the input image and applies Canny edge detection on it 
  * @param image being converted to an edge image
- * @note compare to gabor(Mat&)
+ * @note compare to gabor(), sobel_thres_*() and color_thres()
  */
 void canny_blur(Mat &image);
 
@@ -116,7 +118,8 @@ void gabor(Mat &image);
  * @param points Holds the converted Points 
  * @return Returns either MAPRA_SUCCESS or MAPRA_WARNING
  * @note Storage order for both [left/right]_points: points belonging to same line are stored consecutively:
- * 		Point_0(line_0), Point_1(line_0), Point_2(line_1), Point_3(line_1), ..., Point_num_lines*2-1(line_num_lines-1), ..., Point_num_lines*num_part*2-1(line_num_lines*num_part-1) 
+ *      Point_0(line_0), Point_1(line_0), Point_2(line_1), Point_3(line_1), ..., 
+ *      Point_num_lines*2-1(line_num_lines-1), ..., Point_num_lines*num_part*2-1(line_num_lines*num_part-1) 
  */
 int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines, const int num_part,
                 const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
@@ -160,7 +163,14 @@ void h_sobel(Mat &image);
  */
 int HoughLinesCustom(const Mat &img, const float rho, const float theta,
                       const int threshold, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
-                      const int linesMax, const int roi_start, const int roi_end, const bool b_view, const double min_theta = 0, const double max_theta = CV_PI);
+                      const int linesMax, const int roi_start, const int roi_end, const bool b_view, 
+                      const double min_theta = 0, const double max_theta = CV_PI);
+
+
+/**
+ * 
+ */
+void multi_filter(Mat &image, std::vector<int> algos);
 
 /**
  * Takes the histogram of the upper half of the image as a startig point for 
@@ -228,12 +238,12 @@ void sobel_dir_thres(Mat &image, const int thres_s = 90, const int thres_e = 180
 void sobel_mag_thres(Mat &image, const int thres = 155);
 
 /**
- * Edge detection by Sobel derivative thresholding
+ * Edge detection by Sobel partial derivative thresholding
  * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
  * @param thres_x Start threshold value for the derivatives in x direction
  * @param thres_y Start threshold value for the derivatives in y direction
  */
-void sobel_thres(Mat &image, const int thres_x = 10, const int thres_y = 60);
+void sobel_par_thres(Mat &image, const int thres_x = 10, const int thres_y = 60);
 
 
 /**
