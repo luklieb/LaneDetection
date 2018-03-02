@@ -251,7 +251,39 @@ static int get_points_(const std::vector<Vec2f> &lines, const int num_lines, con
     return MAPRA_SUCCESS;
 }
 
-static int multiple_windows_search_(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &points, const bool left)
+
+static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &coeff, const int order)
+{
+    assert(points.size() >= (unsigned int)order + 1);
+    coeff.clear();
+    const int num_points = points.size();
+    Mat lhs = Mat_<double>(num_points, order+1);
+    Mat rhs = Mat(num_points, 1, CV_64F);
+    Mat solution = Mat_<double>();
+
+    //constructs simple matrix (not Vandermonde matrix)
+    for (int i = 0; i < num_points; ++i)
+    {
+        for (int j = 0; j <= order; ++j)
+        {
+            lhs.at<double>(i, j) = std::pow((double)points[i].y, j);
+        }
+    }
+
+    for (int i = 0; i < num_points; ++i)
+        rhs.at<double>(i) = points[i].x;
+
+    solve(lhs, rhs, solution, DECOMP_QR);
+
+    const double *sol = solution.ptr<double>();
+    //coeff.resize(num_points);
+    //coeff.insert(coeff.begin(), sol[0], sol[num_points-1]);
+    for (int i = 0; i <= order; ++i)
+        coeff.push_back(sol[i]);
+}
+
+
+static int sliding_windows_search_(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &points, const bool left)
 {
 
     int upper_histo[2];
@@ -259,7 +291,7 @@ static int multiple_windows_search_(Mat &input_img, const double roi, const int 
     //has to be of type Point. Stores the idizes of white (non-black) pixels
     std::vector<Point> non_zero;
     int code = h_histogram(input_img, roi, upper_histo);
-    if(code != MAPRA_SUCCESS)
+    if (code != MAPRA_SUCCESS)
         return code;
     std::cout << "histo done: " << upper_histo[0] << ", " << upper_histo[1] << std::endl;
     //offsets from center points of window
@@ -271,13 +303,13 @@ static int multiple_windows_search_(Mat &input_img, const double roi, const int 
     if (left)
     {
         x = upper_histo[0];
-        if(x-x_offset < 0)
+        if (x - x_offset < 0)
             x = x_offset;
     }
     else
     {
         x = upper_histo[1];
-        if(x+x_offset >= input_img.cols)
+        if (x + x_offset >= input_img.cols)
             x = input_img.cols - 1 - x_offset;
     }
 
@@ -289,7 +321,8 @@ static int multiple_windows_search_(Mat &input_img, const double roi, const int 
     for (int i = 0; i < num_windows; ++i)
     {
         //find all indizes of white (non black) pixels --> so we can compute the mean of them later
-        std::cout << "nonzero" << " x: " << x << ", y: " << y << std::endl;
+        std::cout << "nonzero"
+                  << " x: " << x << ", y: " << y << std::endl;
         findNonZero(Mat(input_img, Rect(x - x_offset, y - y_offset, width, height)), non_zero);
         std::cout << "nonzero done" << std::endl;
 
@@ -324,9 +357,9 @@ static int multiple_windows_search_(Mat &input_img, const double roi, const int 
                 x_tmp = x;
                 y_tmp = y;
             }
-            #ifndef NDEBUG
+#ifndef NDEBUG
             std::cout << "multiple_window no white pixels found" << std::endl;
-            #endif
+#endif
         }
 
         points.push_back(Point2f(x_tmp, y_tmp));
@@ -335,49 +368,19 @@ static int multiple_windows_search_(Mat &input_img, const double roi, const int 
         y -= height;
         x = x_tmp;
         //if new search coordinates are not in the image, they are probably not part of a road lane
-        assert(x+x_offset < input_img.cols);
-        if(x+x_offset >= input_img.cols)
+        assert(x + x_offset < input_img.cols);
+        if (x + x_offset >= input_img.cols)
             return MAPRA_WARNING;
-        assert(x-x_offset >= 0);
-        if(x-x_offset < 0)
+        assert(x - x_offset >= 0);
+        if (x - x_offset < 0)
             return MAPRA_WARNING;
 
         non_zero.clear();
     }
     assert(points.size() == (unsigned int)num_windows);
-    if(points.size() != (unsigned int) num_windows)
+    if (points.size() != (unsigned int)num_windows)
         return MAPRA_WARNING;
     return MAPRA_SUCCESS;
-}
-
-static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &coeff, const int order)
-{
-    assert(points.size() >= (unsigned int)order + 1);
-    coeff.clear();
-    const int num_points = points.size();
-    Mat lhs = Mat_<double>(num_points, order+1);
-    Mat rhs = Mat(num_points, 1, CV_64F);
-    Mat solution = Mat_<double>();
-
-    //constructs simple matrix (not Vandermonde matrix)
-    for (int i = 0; i < num_points; ++i)
-    {
-        for (int j = 0; j <= order; ++j)
-        {
-            lhs.at<double>(i, j) = std::pow((double)points[i].y, j);
-        }
-    }
-
-    for (int i = 0; i < num_points; ++i)
-        rhs.at<double>(i) = points[i].x;
-
-    solve(lhs, rhs, solution, DECOMP_QR);
-
-    const double *sol = solution.ptr<double>();
-    //coeff.resize(num_points);
-    //coeff.insert(coeff.begin(), sol[0], sol[num_points-1]);
-    for (int i = 0; i <= order; ++i)
-        coeff.push_back(sol[i]);
 }
 
 //#############################################################################################
@@ -417,9 +420,7 @@ void canny_blur(Mat &image)
     int low_threshold = 100;
     int kernel_size = 3;
     Mat proc;
-    line(image, Point(50, 100), Point(50, 100), Scalar(120, 255), 15);
     cvtColor(image, proc, COLOR_BGR2GRAY);
-    line(proc, Point(0, 100), Point(0, 100), Scalar(255, 255), 15);
     blur(proc, proc, Size(3, 3));
     Canny(proc, image, low_threshold, low_threshold * 3, kernel_size);
 }
@@ -430,7 +431,7 @@ void color_thres(Mat &image, const int thres)
     cvtColor(image, image, COLOR_BGR2HLS);
     //binary (one channel) temporary Mat
     Mat tmp(image.rows, image.cols, CV_8UC1);
-    //take channel 2 (L channel) and store in in first channel in new image
+    //take second channel (1) (L channel) and store in in first channel (0) in new image
     int from_to [] = {1,0};
     //extract second channel from image and save to first channel of tmp
     mixChannels(&image, 1, &tmp, 1, from_to, 1);
@@ -809,12 +810,6 @@ void multi_filter(Mat &image, std::vector<int> algos)
     }
 }
 
-int multiple_windows_search(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
-{
-    int code1 = multiple_windows_search_(input_img, roi, num_windows, width, left_points, true);
-    int code2 = multiple_windows_search_(input_img, roi, num_windows, width, right_points, false);
-    return check_codes(code1, code2);
-}
 
 int partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, const bool b_view)
 {
@@ -846,7 +841,12 @@ void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f
     poly_reg_(right_points, right_coeff, order);
 }
 
-
+int sliding_windows_search(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+{
+    int code1 = sliding_windows_search_(input_img, roi, num_windows, width, left_points, true);
+    int code2 = sliding_windows_search_(input_img, roi, num_windows, width, right_points, false);
+    return check_codes(code1, code2);
+}
 
 void show_image(const String image_name, const Mat &image, const bool wait)
 {
@@ -856,10 +856,9 @@ void show_image(const String image_name, const Mat &image, const bool wait)
         waitKey(0);
 }
 
-void sobel_dir_thres(Mat &image, const int thres_s, const int thres_e)
+void sobel_dir_thres(Mat &image, const int thres_1, const int thres_2)
 {
     //helper needed for temporary conversion to CV_32F from CV_8U
-    line(image, Point(200, 200), Point(200, 200), Scalar(255), 15);
     Mat tmp;
     Mat tmp2;
     Mat tmp3;
@@ -876,15 +875,15 @@ void sobel_dir_thres(Mat &image, const int thres_s, const int thres_e)
     convertScaleAbs(tmp3, image);
     //remove (set to 0) all values over thres_e, leave other ones untouched
     //scales the degrees of thres_e to [0,255]
-    threshold(image, image, (thres_s+5.)/360.*255., 0, THRESH_TOZERO_INV);
+    threshold(image, image, (thres_1+15.)/360.*255., 0, THRESH_TOZERO_INV);
     //remove (set to 0) all values under thres_s, leave other ones untouched
-    threshold(image, image, (thres_s-5.)/360.*255., 0, THRESH_TOZERO);
+    threshold(image, image, (thres_1-15.)/360.*255., 0, THRESH_TOZERO);
     //threshold is 0 --> all values over 0 are set to 255
     threshold(image, image, 0, 255, THRESH_BINARY);
-
+    //analogly for second direction thres_2
     convertScaleAbs(tmp3, image2);
-    threshold(image2, image2, (thres_e+5.)/360.*255., 0, THRESH_TOZERO_INV);
-    threshold(image2, image2, (thres_e-5.)/360.*255., 0, THRESH_TOZERO);
+    threshold(image2, image2, (thres_2+15.)/360.*255., 0, THRESH_TOZERO_INV);
+    threshold(image2, image2, (thres_2-15.)/360.*255., 0, THRESH_TOZERO);
     threshold(image2, image2, 0, 255, THRESH_BINARY);
 
     bitwise_or(image, image2, image);

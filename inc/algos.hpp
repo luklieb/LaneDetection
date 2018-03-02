@@ -168,24 +168,14 @@ int HoughLinesCustom(const Mat &img, const float rho, const float theta,
 
 
 /**
- * 
+ * Applies multiple independend edge detection filters to image
+ * @param image Input color image. Returns a binary (CV_8U) Mat with the detected edges in white
+ * @param algos Vector with numbers representing edge detection algorithms; The order is not important
+ * @note 1 = canny, 2 = sobel_dir_thres, 3 = sobel_mag_thres, 4 = sobel_par_thres, 5 = color_thres
+ * @note each number should only exit max. once in vector algos
  */
 void multi_filter(Mat &image, std::vector<int> algos);
 
-/**
- * Takes the histogram of the upper half of the image as a startig point for 
- * a windows search along the road lanes.
- * @param input_img Image to be searched for road lanes
- * @param roi Vertical starting point in percent of the region of interest (for the h_histrogram() call within)
- * @param num_windows The number of windows for both lanes (left and right)
- * @param width The width (in x-direction) of each windows
- * @param left_points The returned points which were found in the window search on the left side 
- * @param right_points The returned points which were found in the window search on the right side 
- * @return Returns either MAPRA_SUCCESS, MAPRA_WARNING
- * @note The output_points are stored the following way:
- */
-int multiple_windows_search(Mat &input_img, const double roi, const int num_windows, const int width,
-                             std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
 
 /**
  * Applies the Hough Transformation on different sub-regions 
@@ -222,20 +212,37 @@ void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f
  */
 void show_image(const String image_name, const Mat &image, const bool wait);
 
+
+/**
+ * Takes the histogram of the upper half of the image as a startig point for 
+ * a sliding windows search along the road lanes (UDACITY Advance Lane course).
+ * @param input_img Image to be searched for road lanes
+ * @param roi Vertical starting point in percent of the region of interest (for the h_histrogram() call within)
+ * @param num_windows The number of windows for both lanes (left and right)
+ * @param width The width (in x-direction) of each windows
+ * @param left_points The returned points which were found in the window search on the left side 
+ * @param right_points The returned points which were found in the window search on the right side 
+ * @return Returns either MAPRA_SUCCESS, MAPRA_WARNING
+ * @note The output_points are stored the following way:
+ */
+int sliding_windows_search(Mat &input_img, const double roi, const int num_windows, const int width,
+                           std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+
+
 /**
  * Edge detection by Sobel derivativ direction thresholding
  * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
- * @param thres_s First threshold in degrees. Directions +- 5° around it are searched
- * @param thres_e Second threshold in degrees. Directions +- 5° around it are searched
+ * @param thres_1 First threshold in degrees. Directions +- 5° around it are searched
+ * @param thres_2 Second threshold in degrees. Directions +- 5° around it are searched
  */
-void sobel_dir_thres(Mat &image, const int thres_s = 90, const int thres_e = 180);
+void sobel_dir_thres(Mat &image, const int thres_1 = 90, const int thres_2 = 180);
 
 /**
  * Edge detection by Sobel magnitude thresholding
  * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
  * @param thres Threshold for the magnitude
  */
-void sobel_mag_thres(Mat &image, const int thres = 155);
+void sobel_mag_thres(Mat &image, const int thres = 50);
 
 /**
  * Edge detection by Sobel partial derivative thresholding
@@ -256,9 +263,10 @@ void sobel_par_thres(Mat &image, const int thres_x = 10, const int thres_y = 60)
  * @param order Order of polynomials
  * @param dir Path where the resulting image should be stored
  * @param file File name of the resulting image
- * @param Returns either MAPRA_SUCCESS or MAPRA_ERROR
+ * @return Returns either MAPRA_SUCCESS or MAPRA_ERROR
  */
-int store_result(const Mat &image, const double &roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order, const String dir, const String file);
+int store_result(const Mat &image, const double &roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, 
+                const int order, const String dir, const String file);
 
 
 /**
