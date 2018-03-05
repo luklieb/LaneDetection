@@ -1,6 +1,5 @@
 #include "helper.hpp"
 
-
 void ParameterReader::read(const std::string &filename) {
     std::ifstream parameters(filename);
     std::string line;
@@ -18,6 +17,10 @@ void ParameterReader::read(const std::string &filename) {
     parameters.close();
 }
 
-
-
-
+void show_image(const String image_name, const Mat &image, const bool wait)
+{
+    namedWindow(image_name, WINDOW_AUTOSIZE);
+    imshow(image_name, image);
+    if (wait)
+        waitKey(0);
+}

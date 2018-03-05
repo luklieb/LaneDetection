@@ -4,8 +4,10 @@
 #include <fstream>
 #include <map>
 #include <string>
+#include <opencv/cv.hpp>
+#include "codes.hpp"
 
-
+using namespace cv;
 
 class ParameterReader {
     private:
@@ -35,8 +37,6 @@ T ParameterReader::get_value(const std::string &key) {
     }
 }
 
-
-
 /**
  * Makes sure that every directory ends with an '/'
  * @note makes concatenation of multiple directories or
@@ -54,3 +54,11 @@ std::string modify_dir(T old_dir)
 	}
     return dir; 
 }
+
+/**
+ * Helper function to show an image
+ * @param image_name for the window
+ * @param image to be shwon in window
+ * @param wait option to wait for a key input to close the window showing the image
+ */
+void show_image(const String image_name, const Mat &image, const bool wait);

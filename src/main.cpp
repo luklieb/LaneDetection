@@ -3,6 +3,8 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "algos.hpp"
+#include "filters.hpp"
+#include "fitting.hpp"
 #include "helper.hpp"
 
 using namespace cv;
@@ -59,7 +61,7 @@ int main(int argc, char **argv)
     const int W_WIDTH = 40;       //20, 40, 60, 80
 
     //Birdview Constants
-    const bool B_VIEW = true; //true, false
+    const bool B_VIEW = false; //true, false
     const double B_OFFSET_MID = 0.04; //const
     const double B_OFFSET = 0.4; //const
     const double B_OFFSET2 = 0.05; //const
@@ -150,6 +152,7 @@ int main(int argc, char **argv)
     //**********************************************************
 
     multi_filter(image, FILTERS, CA_THRES, KERNEL, S_MAG, S_PAR_X, S_PAR_Y, C_THRES);
+    show_image("after", image, true);
 
     //**********************************************************
     //******************* Algorithms ***************************
@@ -159,6 +162,9 @@ int main(int argc, char **argv)
     std::vector<Point2f> left_points;
     std::vector<Point2f> right_points;
 
+    //Return code
+    int code;
+
     //Partitioned Hough
     if (ALGO == 1)
     {
@@ -166,8 +172,12 @@ int main(int argc, char **argv)
         sub_partition(P_START, image.rows, NUM_PART, true, coords_part);
         std::vector<Vec2f> left_lines;
         std::vector<Vec2f> right_lines;
-        partitioned_hough(processed, coords_part, NUM_PART, 1, left_lines, right_lines, B_VIEW);
-        get_points(left_lines, right_lines, NUM_LINES, NUM_PART, coords_part, left_points, right_points);
+        code = partitioned_hough(processed, coords_part, NUM_PART, 1, left_lines, right_lines, B_VIEW);
+        if(code != MAPRA_SUCCESS)
+            return code;
+        code = get_points(left_lines, right_lines, NUM_LINES, NUM_PART, coords_part, left_points, right_points);
+        if(code != MAPRA_SUCCESS)
+            return code;
         //maybe add an average function for the points on same line...
     }
 
@@ -178,16 +188,26 @@ int main(int argc, char **argv)
         sub_partition(P_START, image.rows, NUM_PART, true, coords_part);
         std::vector<Vec2f> left_lines;
         std::vector<Vec2f> right_lines;
-        partitioned_hough(processed, coords_part, NUM_PART, NUM_LINES, left_lines, right_lines, B_VIEW);
-        get_points(left_lines, right_lines, NUM_LINES, NUM_PART, coords_part, left_points, right_points);
-        alm(left_points, right_points, NUM_PART, NUM_LINES);
-        alm_conversion(left_points, right_points);
+        code = partitioned_hough(processed, coords_part, NUM_PART, NUM_LINES, left_lines, right_lines, B_VIEW);
+        if (code != MAPRA_SUCCESS)
+            return code;
+        code = get_points(left_lines, right_lines, NUM_LINES, NUM_PART, coords_part, left_points, right_points);
+        if (code != MAPRA_SUCCESS)
+            return code;
+        code = alm(left_points, right_points, NUM_PART, NUM_LINES);
+        if (code != MAPRA_SUCCESS)
+            return code;
+        code = alm_conversion(left_points, right_points);
+        if (code != MAPRA_SUCCESS)
+            return code;
     }
 
     //Sliding Windows
     if(ALGO == 3)
     {
-        sliding_windows_search(processed, ROI_START, W_NUM_WINDOWS, W_WIDTH, left_points, right_points);
+        code = sliding_windows_search(processed, ROI_START, W_NUM_WINDOWS, W_WIDTH, left_points, right_points);
+        if (code != MAPRA_SUCCESS)
+            return code;
     }
 
     //Window search
@@ -195,7 +215,9 @@ int main(int argc, char **argv)
     {
         int histo_points [2];
         h_histogram(processed, ROI_START, histo_points);
-        window_search(processed, histo_points, W_WIDTH, ROI_START, left_points, right_points);
+        code = window_search(processed, histo_points, W_WIDTH, ROI_START, left_points, right_points);
+        if (code != MAPRA_SUCCESS)
+            return code;
     }
 
     //**********************************************************
@@ -214,7 +236,9 @@ int main(int argc, char **argv)
         perspectiveTransform(tmp2, right_points, b_inv_mat);
     }
     poly_reg(left_points, right_points, left_coeff, right_coeff, ORDER);
-    store_result(processed, ROI_START, left_coeff, right_coeff, ORDER, result_dir, input_file);
+    code = store_result(processed, ROI_START, left_coeff, right_coeff, ORDER, result_dir, input_file);
+    if (code != MAPRA_SUCCESS)
+        return code;
 
     return MAPRA_SUCCESS;
 }

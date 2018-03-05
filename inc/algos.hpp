@@ -7,8 +7,8 @@
 #include <numeric>
 #include <cmath>
 #include <string>
-#include <functional>
-#include <algorithm>
+#include "codes.hpp"
+#include "helper.hpp"
 
 using namespace cv;
 
@@ -23,17 +23,6 @@ using namespace cv;
  *
  * h: high, l: low
  */
-
-
-/**
- * MAPRA_WARNING => Detected lanes probably wrong
- * MAPRA_SUCCESS => Actual (correct) lanes were found
- * MAPRA_ERROR => Severe Error 
- */
-#define MAPRA_WARNING -1
-#define MAPRA_SUCCESS 0
-#define MAPRA_ERROR 1
-
 
 /**
  * Conducts Acitve Line Modelling (ALM) on the input points (belonging pariwise to lines from a Hough transform after get_points())
@@ -56,62 +45,6 @@ int alm(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, c
 int alm_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
 
 /**
- * @note  ### Deprecated ###
- * Transforms the trapezoid (p1) of the input image to a rectangle (p2) in the output image creating a top-down 'bird view' image
- * @param input_img input image
- * @param output_img empty image with same size as input_img
- * @param rel_height is the relative height of the to be transformed image section (number between 0 and 1) 
- * @param rel_left is the relative horizontal distance from the origin to the upper left corner of the trapezoid (number between 0 and 1)
- * @param rel_right is the relative horizontal distance from the origin to the upper right corner of the trapezoid (number between 0 and 1)
- * @note p1 has to be modified for different cameras and positions of the camera
- * @note after transformation edges of lines get blurry --> might be a problem for canny edge detection
- */
-void bird_view(const Mat &input_img, Mat &output_img, const double rel_height, const double rel_left, const double rel_right);
-
-/**
- * Blurs the input image and applies Canny edge detection on it 
- * @param image being converted to an edge image
- * @param thres Lower threshold
- * @param kernel Size of kernel
- * @note compare to gabor(), sobel_thres_*() and color_thres()
- */
-void canny_blur(Mat &image, const int thres, const int kernel);
-
-
-/**
- * Edge detection by color thresholding in the HLS color space
- * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
- * @param thres Start threshold value for the L channel
- */
-void color_thres(Mat &image, const int thres = 220);
-
-/**
- * @note Deprecated, replaced by poly_reg()
- * Takes three points, fits a quadratic curve to them and draws the curve on the image
- * @param image to be drawn on
- * @param roi Vertical starting point in percent of the region of interest
- * @param points holding three points
- */
-void draw_curve(Mat &image, const double roi, const std::vector<Point> &left_points, const std::vector<Point> &right_points);
-
-/**
- * Draws the two polynomials (of order [left/right]_coeff.size()-1) according to their coefficients on the input image
- * @param image Image to be drawn on
- * @param roi Vertical starting point in percent of the region of interest
- * @param left_coeff Holds the coefficients for the left lane polynomial
- * @param right_coeff Holds the coefficients for the right lane polynomial
- * @param order Order of polynomial (e.g. for quadradic polynomials the order is 2)
- */
-void draw_poly(Mat &image, const double roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order);
-
-/**
- * Creates a Gabor kernel and applies it to the input image for edge detection
- * @param image being converted to an edge image
- * @note compare to canny_blur(Mat&)
- */
-void gabor(Mat &image);
-
-/**
  * Converts the polar coordiantes from a Hough Transform (lines) to points according to their start/end of each partition
  * @param lines The polar coordinates returned from a Hough Transform
  * @param num_lines The number of lines of each side of each partition
@@ -124,7 +57,7 @@ void gabor(Mat &image);
  *      Point_num_lines*2-1(line_num_lines-1), ..., Point_num_lines*num_part*2-1(line_num_lines*num_part-1) 
  */
 int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines, const int num_part,
-                const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+               const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
 
 /**
  * Returns the two horizontal (x-coordinates) points (one for right/left half) with the maximum according to the histogram of the ROI
@@ -135,12 +68,6 @@ int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &r
  * @note reduce() function could be optimized with an additional roi constraint
  */
 int h_histogram(const Mat &input_img, const double roi, int *points);
-
-/**
- * Removes only  horizontal lines in the input image 
- * @param image in which horizontal lines should be removed
- */
-void h_sobel(Mat &image);
 
 /**
  * Returns polar coordinates (rho and theta) of the found lines
@@ -164,25 +91,9 @@ void h_sobel(Mat &image);
  * add restrictions in function to restrict e.g. the angle of the second line, etc.)
  */
 int HoughLinesCustom(const Mat &img, const float rho, const float theta,
-                      const int threshold, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
-                      const int linesMax, const int roi_start, const int roi_end, const bool b_view, 
-                      const double min_theta = 0, const double max_theta = CV_PI);
-
-
-/**
- * Applies multiple independend edge detection filters to image
- * @param image Input color image. Returns a binary (CV_8U) Mat with the detected edges in white
- * @param algos Vector with numbers representing edge detection algorithms; The order is not important
- * @param ca_thres Threshold for canny edge around (150-240)
- * @param kernel Kernel size (3,5,7)
- * @param s_mag Threshold for Sobel magnitude around (150-240)
- * @param s_par_x Threshold for Sobel derivative in x direction around (10-100)
- * @param s_par_y Threshold for Sobel derivative in y direction around (50-150)
- * @param c_thres Threshold for L-channel of HLS color space around (180-240)
- * @note 1 = canny, 2 = sobel_mag_thres, 3 = sobel_par_thres, 4 = color_thres
- * @note each number should only exit max. once in vector algos
- */
-void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, int s_mag, int s_par_x, int s_par_y, int c_thres);
+                     const int threshold, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
+                     const int linesMax, const int roi_start, const int roi_end, const bool b_view,
+                     const double min_theta = 0, const double max_theta = CV_PI);
 
 /**
  * Applies the Hough Transformation on different sub-regions 
@@ -198,26 +109,8 @@ void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, 
  * 		at the end num_lines lines of the last partition
  */
 int partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines,
-                       std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, const bool b_view);
+                      std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, const bool b_view);
 
-/**
- * Takes an input vector of points and does a polynomal regression on it
- * It always fits a polynomial of order = num_points-1
- * @param points Vector holding the points to be fit
- * @param coeff Return vector holding the num_points coefficients
- * @note See here: http://mathworld.wolfram.com/LeastSquaresFittingPolynomial.html
- */
-void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points, 
-                std::vector<double> &left_coeff, std::vector<double> &right_coeff, const int order);
-
-
-/**
- * Helper function to show an image
- * @param image_name for the window
- * @param image to be shwon in window
- * @param wait option to wait for a key input to close the window showing the image
- */
-void show_image(const String image_name, const Mat &image, const bool wait);
 
 
 /**
@@ -234,48 +127,6 @@ void show_image(const String image_name, const Mat &image, const bool wait);
  */
 int sliding_windows_search(Mat &input_img, const double roi, const int num_windows, const int width,
                            std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
-
-
-/**
- * @note DEPRECATED, because results were not good enough.
- * Edge detection by Sobel derivativ direction thresholding
- * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
- * @param thres_1 First threshold in degrees. Directions +- 5° around it are searched
- * @param thres_2 Second threshold in degrees. Directions +- 5° around it are searched
- */
-void sobel_dir_thres(Mat &image, const int thres_1 = 90, const int thres_2 = 180);
-
-/**
- * Edge detection by Sobel magnitude thresholding
- * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
- * @param thres Threshold for the magnitude
- */
-void sobel_mag_thres(Mat &image, const int thres = 50);
-
-/**
- * Edge detection by Sobel partial derivative thresholding
- * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
- * @param thres_x Start threshold value for the derivatives in x direction
- * @param thres_y Start threshold value for the derivatives in y direction
- */
-void sobel_par_thres(Mat &image, const int thres_x = 10, const int thres_y = 60);
-
-
-/**
- * Saves an color coded image after lane detection for the evaluation in file evaluate.py
- * @note OpenCV uses BGR -> non-lane areas colored in red => (0,0,255), lane areas in pink => (255,0,255) 
- * @param image Used for correct output image sizes
- * @param roi Vertical starting point in percent of the region of interest
- * @param left_coeff Coefficients for the polynomial describing the left boundary of the lane
- * @param right_coeff Coefficients for the polynomial describing the right boundary of the lane
- * @param order Order of polynomials
- * @param dir Path where the resulting image should be stored
- * @param file File name of the resulting image
- * @return Returns either MAPRA_SUCCESS or MAPRA_ERROR
- */
-int store_result(const Mat &image, const double &roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, 
-                const int order, const String dir, const String file);
-
 
 /**
  * Returns the (x or y) coordinates of the sub-domains
@@ -308,4 +159,4 @@ void v_roi(Mat &img, const int start);
  * @return Returns either MAPRA_SUCCESS, MAPRA_WARNING
  */
 int window_search(const Mat &img, const int *input_points, const int window_width, const double roi,
-                   std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+                  std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
