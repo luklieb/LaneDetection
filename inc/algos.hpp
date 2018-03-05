@@ -38,17 +38,6 @@ using namespace cv;
 int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part, 
         const int num_lines, const bool b_view, const int image_start);
 
-/**
- * Converts the points-pairs making up lines returned from alm() or partitoned_hough() with num_lines = 1
- * into single points (in order to compute the coefficients)
- * It computes the x-cooordinate average of two points with the same y-coordinate (two adjacent lines)
- * Before each line has its own start and end point, after the call each end point of a line segment 
- * is the start point of the next line segment
- * @param left_points Holds the points-pairs for the left lane
- * @param left_points Holds the points-pairs for the right lane
- * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
- */
-int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
 
 /**
  * Converts the polar coordiantes from a Hough Transform (lines) to points according to their start/end of each partition
@@ -76,7 +65,7 @@ int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &r
 int h_histogram(const Mat &input_img, const double roi, int *points);
 
 /**
- * Conducts a simple Hough line search in multiple partitons (in each only one line per side is found)
+ * Conducts a simple Hough line search in multiple partitions (in each only one line per side is found)
  * @param img Input image
  * @param left_points Holds the found points of the left lane
  * @param right_points Holds the found points of the right
@@ -110,10 +99,22 @@ int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f
  * @note: add further failsafe (one more bool to check wheter birdsview or not and then
  * add restrictions in function to restrict e.g. the angle of the second line, etc.)
  */
-int HoughLinesCustom(const Mat &img, const float rho, const float theta,
+int hough_lines_custom(const Mat &img, const float rho, const float theta,
                      const int threshold, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
                      const int linesMax, const int roi_start, const int roi_end, const bool b_view,
                      const double min_theta = 0, const double max_theta = CV_PI);
+
+/**
+ * Converts the points-pairs making up lines returned from alm() or partitoned_hough() with num_lines = 1
+ * into single points (in order to compute the coefficients)
+ * It computes the x-cooordinate average of two points with the same y-coordinate (two adjacent lines)
+ * Before each line has its own start and end point, after the call each end point of a line segment 
+ * is the start point of the next line segment
+ * @param left_points Holds the points-pairs for the left lane
+ * @param left_points Holds the points-pairs for the right lane
+ * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
+ */
+int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
 
 /**
  * Applies the Hough Transformation on different sub-regions 

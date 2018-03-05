@@ -159,28 +159,6 @@ static int alm_(std::vector<Point2f> &points, const int num_part, const int num_
     return MAPRA_SUCCESS;
 }
 
-static int pair_conversion_(std::vector<Point2f> &points)
-{
-    //copy
-    std::vector<Point2f> cpy(points);
-    int size = points.size();
-    assert(size % 2 == 0);
-    points.clear();
-    //first point can stay
-    points.push_back(cpy[0]);
-    //compute mean of x-coordinates of adjacent lines
-    for (int i = 1; i < size - 1; i += 2)
-    {
-        assert(cpy[i].y == cpy[i+1].y);
-        points.push_back(Point2f(0.5 * (cpy[i].x + cpy[i + 1].x), cpy[i].y));
-    }
-    //last point can stay
-    points.push_back(cpy[size - 1]);
-    if (points.size() % 2 != 0)
-        return MAPRA_WARNING;
-    return MAPRA_SUCCESS;
-}
-
 static int get_points_(const std::vector<Vec2f> &lines, const int num_lines, const int num_part, const int *coords_part, std::vector<Point2f> &points)
 {
     points.clear();
@@ -210,6 +188,28 @@ static int get_points_(const std::vector<Vec2f> &lines, const int num_lines, con
     }
     assert(points.size() == 2u * num_part * num_lines);
     if (points.size() != 2u * num_part * num_lines)
+        return MAPRA_WARNING;
+    return MAPRA_SUCCESS;
+}
+
+static int pair_conversion_(std::vector<Point2f> &points)
+{
+    //copy
+    std::vector<Point2f> cpy(points);
+    int size = points.size();
+    assert(size % 2 == 0);
+    points.clear();
+    //first point can stay
+    points.push_back(cpy[0]);
+    //compute mean of x-coordinates of adjacent lines
+    for (int i = 1; i < size - 1; i += 2)
+    {
+        assert(cpy[i].y == cpy[i+1].y);
+        points.push_back(Point2f(0.5 * (cpy[i].x + cpy[i + 1].x), cpy[i].y));
+    }
+    //last point can stay
+    points.push_back(cpy[size - 1]);
+    if (points.size() % 2 != 0)
         return MAPRA_WARNING;
     return MAPRA_SUCCESS;
 }
@@ -341,12 +341,6 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
     return check_codes(code1, code2);
 }
 
-int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
-{
-    int code1 = pair_conversion_(left_points);
-    int code2 = pair_conversion_(right_points);
-    return check_codes(code1, code2);
-}
 
 int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines, 
     const int num_part, const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
@@ -408,7 +402,7 @@ int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f
     return MAPRA_SUCCESS;
 }
 
-int HoughLinesCustom(const Mat &img, const float rho, const float theta, const int threshold,
+int hough_lines_custom(const Mat &img, const float rho, const float theta, const int threshold,
                      std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
                      const int lines_max, const int roi_start, const int roi_end, const bool b_view, const double min_theta, const double max_theta)
 {
@@ -656,6 +650,13 @@ int HoughLinesCustom(const Mat &img, const float rho, const float theta, const i
     return MAPRA_SUCCESS;
 }
 
+int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+{
+    int code1 = pair_conversion_(left_points);
+    int code2 = pair_conversion_(right_points);
+    return check_codes(code1, code2);
+}
+
 int partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, const bool b_view)
 {
     left_lines.clear();
@@ -665,7 +666,7 @@ int partitioned_hough(const Mat &img, const int *part_coords, const int num_part
     int code;
     for (int i = 0; i < num_part; ++i)
     {
-        code = HoughLinesCustom(img, 1., CV_PI / 180., 10, left_lines_tmp, right_lines_tmp, num_lines, part_coords[i], part_coords[i + 1], b_view);
+        code = hough_lines_custom(img, 1., CV_PI / 180., 10, left_lines_tmp, right_lines_tmp, num_lines, part_coords[i], part_coords[i + 1], b_view);
         if (code != MAPRA_SUCCESS)
             return code;
         left_lines.insert(left_lines.end(), left_lines_tmp.begin(), left_lines_tmp.end());
