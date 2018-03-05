@@ -71,9 +71,11 @@ void bird_view(const Mat &input_img, Mat &output_img, const double rel_height, c
 /**
  * Blurs the input image and applies Canny edge detection on it 
  * @param image being converted to an edge image
+ * @param thres Lower threshold
+ * @param kernel Size of kernel
  * @note compare to gabor(), sobel_thres_*() and color_thres()
  */
-void canny_blur(Mat &image);
+void canny_blur(Mat &image, const int thres, const int kernel);
 
 
 /**
@@ -171,11 +173,16 @@ int HoughLinesCustom(const Mat &img, const float rho, const float theta,
  * Applies multiple independend edge detection filters to image
  * @param image Input color image. Returns a binary (CV_8U) Mat with the detected edges in white
  * @param algos Vector with numbers representing edge detection algorithms; The order is not important
- * @note 1 = canny, 2 = sobel_dir_thres, 3 = sobel_mag_thres, 4 = sobel_par_thres, 5 = color_thres
+ * @param ca_thres Threshold for canny edge around (150-240)
+ * @param kernel Kernel size (3,5,7)
+ * @param s_mag Threshold for Sobel magnitude around (150-240)
+ * @param s_par_x Threshold for Sobel derivative in x direction around (10-100)
+ * @param s_par_y Threshold for Sobel derivative in y direction around (50-150)
+ * @param c_thres Threshold for L-channel of HLS color space around (180-240)
+ * @note 1 = canny, 2 = sobel_mag_thres, 3 = sobel_par_thres, 4 = color_thres
  * @note each number should only exit max. once in vector algos
  */
-void multi_filter(Mat &image, std::vector<int> algos);
-
+void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, int s_mag, int s_par_x, int s_par_y, int c_thres);
 
 /**
  * Applies the Hough Transformation on different sub-regions 
@@ -230,6 +237,7 @@ int sliding_windows_search(Mat &input_img, const double roi, const int num_windo
 
 
 /**
+ * @note DEPRECATED, because results were not good enough.
  * Edge detection by Sobel derivativ direction thresholding
  * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
  * @param thres_1 First threshold in degrees. Directions +- 5° around it are searched

@@ -413,16 +413,14 @@ void bird_view(const Mat &input_img, Mat &output_img, const double rel_height, c
     warpPerspective(input_img, output_img, mat, Size(input_img.cols, input_img.rows));
 }
 
-void canny_blur(Mat &image)
+void canny_blur(Mat &image, const int thres, const int kernel)
 {
     //original: low_threshold=50, kernel_size=3: smooth, but many left out edges
     //birdview: 350, 5
-    int low_threshold = 100;
-    int kernel_size = 3;
     Mat proc;
     cvtColor(image, proc, COLOR_BGR2GRAY);
     blur(proc, proc, Size(3, 3));
-    Canny(proc, image, low_threshold, low_threshold * 3, kernel_size);
+    Canny(proc, image, thres, thres * 3, kernel);
 }
 
 void color_thres(Mat &image, const int thres)
@@ -776,23 +774,22 @@ int HoughLinesCustom(const Mat &img, const float rho, const float theta, const i
     return MAPRA_SUCCESS;
 }
 
-
-void multi_filter(Mat &image, std::vector<int> algos)
+void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, int s_mag, int s_par_x, int s_par_y, int c_thres)
 {
-    assert(*std::max_element(algos.begin(), algos.end())<=5 && *std::min_element(algos.begin(), algos.end())>=1);
+    assert(*std::max_element(algos.begin(), algos.end())<=4 && *std::min_element(algos.begin(), algos.end())>=1);
     using namespace std::placeholders;
 
     std::vector<std::pair<std::function<void(Mat &)>, Mat>> fct_calls;
     if(any_of(algos.begin(), algos.end(), [](int i){return i == 1;}))
-        fct_calls.push_back(std::make_pair(canny_blur, image.clone()));
+        fct_calls.push_back(std::make_pair(std::bind(canny_blur, _1, ca_thres, kernel), image.clone()));
+    //if (any_of(algos.begin(), algos.end(), [](int i) { return i == 2; }))
+        //fct_calls.push_back(std::make_pair(std::bind([](Mat &i) { sobel_dir_thres(i); }, _1), image.clone()));
     if (any_of(algos.begin(), algos.end(), [](int i) { return i == 2; }))
-        fct_calls.push_back(std::make_pair(std::bind([](Mat &i) { sobel_dir_thres(i); }, _1), image.clone()));
+        fct_calls.push_back(std::make_pair(std::bind(sobel_mag_thres, _1, s_mag), image.clone()));
     if (any_of(algos.begin(), algos.end(), [](int i) { return i == 3; }))
-        fct_calls.push_back(std::make_pair(std::bind([](Mat &i) { sobel_mag_thres(i); }, _1), image.clone()));
+        fct_calls.push_back(std::make_pair(std::bind(sobel_par_thres, _1, s_par_x, s_par_y), image.clone()));
     if (any_of(algos.begin(), algos.end(), [](int i) { return i == 4; }))
-        fct_calls.push_back(std::make_pair(std::bind([](Mat &i) { sobel_par_thres(i); }, _1), image.clone()));
-    if (any_of(algos.begin(), algos.end(), [](int i) { return i == 5; }))
-        fct_calls.push_back(std::make_pair(std::bind([](Mat &i) { color_thres(i); }, _1), image.clone()));
+        fct_calls.push_back(std::make_pair(std::bind(color_thres, _1, c_thres), image.clone()));
 
     for(auto &f : fct_calls)
         f.first(f.second);
