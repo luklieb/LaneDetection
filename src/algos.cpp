@@ -98,6 +98,9 @@ struct hough_cmp_gt
 
 static int alm_(std::vector<Point2f> &points, const int num_part, const int num_lines)
 {
+    
+    
+    
     assert(points.size() % 2 == 0);
 
     std::vector<std::vector<Point2f>> possible_points(num_lines);
@@ -156,7 +159,7 @@ static int alm_(std::vector<Point2f> &points, const int num_part, const int num_
     return MAPRA_SUCCESS;
 }
 
-static int alm_conversion_(std::vector<Point2f> &points)
+static int pair_conversion_(std::vector<Point2f> &points)
 {
     //copy
     std::vector<Point2f> cpy(points);
@@ -168,6 +171,7 @@ static int alm_conversion_(std::vector<Point2f> &points)
     //compute mean of x-coordinates of adjacent lines
     for (int i = 1; i < size - 1; i += 2)
     {
+        assert(cpy[i].y == cpy[i+1].y);
         points.push_back(Point2f(0.5 * (cpy[i].x + cpy[i + 1].x), cpy[i].y));
     }
     //last point can stay
@@ -314,21 +318,38 @@ static int sliding_windows_search_(Mat &input_img, const double roi, const int n
 //######################################### INTERFACE #########################################
 //#############################################################################################
 
-int alm(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part, const int num_lines)
+int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part, const int num_lines,
+        const bool b_view, const int image_start)
 {
+    int coords_part[num_part + 1];
+    sub_partition(image_start, img.rows, num_part, true, coords_part);
+    std::vector<Vec2f> left_lines;
+    std::vector<Vec2f> right_lines;
+    int code = partitioned_hough(img, coords_part, num_part, num_lines, left_lines, right_lines, b_view);
+    if (code != MAPRA_SUCCESS)
+        return code;
+    code = get_points(left_lines, right_lines, num_lines, num_part, coords_part, left_points, right_points);
+    if (code != MAPRA_SUCCESS)
+        return code;
+
     int code1 = alm_(left_points, num_part, num_lines);
     int code2 = alm_(right_points, num_part, num_lines);
+
+    code = pair_conversion(left_points, right_points);
+    if (code != MAPRA_SUCCESS)
+        return code;
     return check_codes(code1, code2);
 }
 
-int alm_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
-    int code1 = alm_conversion_(left_points);
-    int code2 = alm_conversion_(right_points);
+    int code1 = pair_conversion_(left_points);
+    int code2 = pair_conversion_(right_points);
     return check_codes(code1, code2);
 }
 
-int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines, const int num_part, const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines, 
+    const int num_part, const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
     int code1 = get_points_(left_lines, num_lines, num_part, coords_part, left_points);
     int code2 = get_points_(right_lines, num_lines, num_part, coords_part, right_points);
@@ -364,6 +385,26 @@ int h_histogram(const Mat &input_img, const double roi, int *x_points)
     assert(x_points[0] != -1 && x_points[1] != -1 && x_points[0] <= x_points[1]);
     if (x_points[0] == -1 || x_points[1] == -1 || x_points[0] > x_points[1])
         return MAPRA_WARNING;
+    return MAPRA_SUCCESS;
+}
+
+int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part,
+          const int num_lines, const bool b_view, const int image_start)
+{
+    int coords_part[num_part + 1];
+    sub_partition(image_start, img.rows, num_part, true, coords_part);
+    std::vector<Vec2f> left_lines;
+    std::vector<Vec2f> right_lines;
+    int code = partitioned_hough(img, coords_part, num_part, 1, left_lines, right_lines, b_view);
+    if (code != MAPRA_SUCCESS)
+        return code;
+    code = get_points(left_lines, right_lines, num_lines, num_part, coords_part, left_points, right_points);
+    assert(left_points.size() == 2u*num_part && right_points.size() == 2u*num_part);
+    if(left_points.size() != 2u*num_part || right_points.size() != 2u*num_part)
+        return MAPRA_WARNING;
+    pair_conversion(left_points, right_points);
+    if (code != MAPRA_SUCCESS)
+        return code;
     return MAPRA_SUCCESS;
 }
 
@@ -674,8 +715,11 @@ void v_roi(Mat &img, const double start)
     rectangle(img, Point(0, 0), Point(img.cols, img.rows * start), Scalar(0), CV_FILLED);
 }
 
-int window_search(const Mat &img, const int *input_points, const int window_width, const double roi, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int window_search(const Mat &img, const int window_width, const double roi, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
+
+    int input_points[2];
+    h_histogram(img, roi, input_points);
 
     left_points.clear();
     right_points.clear();

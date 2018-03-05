@@ -26,23 +26,29 @@ using namespace cv;
 
 /**
  * Conducts Acitve Line Modelling (ALM) on the input points (belonging pariwise to lines from a Hough transform after get_points())
- * @note Needs for each side num_part * num_lines * 2 points; Start points of one line segment have even indices, end points have odd indices
- * @param left_points Holds the pairwise points (start and end of one line) of the lines belonging to the left lane of the different partitionts
- * @param right_points Holds the pairwise points (start and end of line) of the lines belonging to the right lane of the different partitions 
+ * @param img Input image
+ * @param left_points Holds the found points of the left lane
+ * @param right_points Holds the found points of the right
  * @param num_part Number of partitions per side
  * @param num_lines Number of lines per partition
+ * @param b_view Bird View on or off
+ * @param image_start Start point in pixel (y-axis)
  * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
  */
-int alm(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part, const int num_lines);
+int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part, 
+        const int num_lines, const bool b_view, const int image_start);
 
 /**
- * Converts the points-pairs making up lines returned from alm() into single points (in order to compute the coefficients)
+ * Converts the points-pairs making up lines returned from alm() or partitoned_hough() with num_lines = 1
+ * into single points (in order to compute the coefficients)
  * It computes the x-cooordinate average of two points with the same y-coordinate (two adjacent lines)
+ * Before each line has its own start and end point, after the call each end point of a line segment 
+ * is the start point of the next line segment
  * @param left_points Holds the points-pairs for the left lane
  * @param left_points Holds the points-pairs for the right lane
  * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
  */
-int alm_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
 
 /**
  * Converts the polar coordiantes from a Hough Transform (lines) to points according to their start/end of each partition
@@ -68,6 +74,20 @@ int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &r
  * @note reduce() function could be optimized with an additional roi constraint
  */
 int h_histogram(const Mat &input_img, const double roi, int *points);
+
+/**
+ * Conducts a simple Hough line search in multiple partitons (in each only one line per side is found)
+ * @param img Input image
+ * @param left_points Holds the found points of the left lane
+ * @param right_points Holds the found points of the right
+ * @param num_part Number of partitions per side
+ * @param num_lines Number of lines per partition
+ * @param b_view Bird View on or off
+ * @param image_start Start point in pixel (y-axis)
+ * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
+ */
+int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part,
+        const int num_lines, const bool b_view, const int image_start);
 
 /**
  * Returns polar coordinates (rho and theta) of the found lines
@@ -150,7 +170,6 @@ void v_roi(Mat &img, const int start);
  * Given two input-window-starting-points (from a h_histogram), search those in three different places along the y-axis 
  * to find 6 total points of the two curved road lane
  * @param img image to be searched for the six road lane points
- * @param input_points holds the two window starting points from a h_histogram
  * @param window_width width of one of the two search windows
  * @param roi Percent of the image rows where the region of interest start
  * @param output_points returns the six points found in the image. If no suitable point is found (-1,-1) is returned
@@ -158,5 +177,5 @@ void v_roi(Mat &img, const int start);
  * @note points are saved from top (high y values) to bottom (low y values) in [left/right]_points
  * @return Returns either MAPRA_SUCCESS, MAPRA_WARNING
  */
-int window_search(const Mat &img, const int *input_points, const int window_width, const double roi,
+int window_search(const Mat &img, const int window_width, const double roi,
                   std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);

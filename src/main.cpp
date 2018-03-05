@@ -69,14 +69,14 @@ int main(int argc, char **argv)
     Mat b_mat;
     Mat b_inv_mat;
 
-    int P_START;
+    int I_START;
     if (B_VIEW)
     {
-        P_START = 0;
+        I_START = 0;
     }
     else
     {
-        P_START = ROI_START * image.rows;
+        I_START = ROI_START * image.rows;
     }
 
     //Edge detection filters
@@ -168,36 +168,15 @@ int main(int argc, char **argv)
     //Partitioned Hough
     if (ALGO == 1)
     {
-        int coords_part[NUM_PART + 1];
-        sub_partition(P_START, image.rows, NUM_PART, true, coords_part);
-        std::vector<Vec2f> left_lines;
-        std::vector<Vec2f> right_lines;
-        code = partitioned_hough(processed, coords_part, NUM_PART, 1, left_lines, right_lines, B_VIEW);
+        code = hough(processed, left_points, right_points, NUM_PART, NUM_LINES, B_VIEW, I_START);
         if(code != MAPRA_SUCCESS)
             return code;
-        code = get_points(left_lines, right_lines, NUM_LINES, NUM_PART, coords_part, left_points, right_points);
-        if(code != MAPRA_SUCCESS)
-            return code;
-        //maybe add an average function for the points on same line...
     }
 
     //ALM
     if (ALGO == 2)
     {
-        int coords_part[NUM_PART + 1];
-        sub_partition(P_START, image.rows, NUM_PART, true, coords_part);
-        std::vector<Vec2f> left_lines;
-        std::vector<Vec2f> right_lines;
-        code = partitioned_hough(processed, coords_part, NUM_PART, NUM_LINES, left_lines, right_lines, B_VIEW);
-        if (code != MAPRA_SUCCESS)
-            return code;
-        code = get_points(left_lines, right_lines, NUM_LINES, NUM_PART, coords_part, left_points, right_points);
-        if (code != MAPRA_SUCCESS)
-            return code;
-        code = alm(left_points, right_points, NUM_PART, NUM_LINES);
-        if (code != MAPRA_SUCCESS)
-            return code;
-        code = alm_conversion(left_points, right_points);
+        code = alm(processed, left_points, right_points, NUM_PART, NUM_LINES, B_VIEW, I_START);
         if (code != MAPRA_SUCCESS)
             return code;
     }
@@ -213,9 +192,7 @@ int main(int argc, char **argv)
     //Window search
     if(ALGO == 4)
     {
-        int histo_points [2];
-        h_histogram(processed, ROI_START, histo_points);
-        code = window_search(processed, histo_points, W_WIDTH, ROI_START, left_points, right_points);
+        code = window_search(processed, W_WIDTH, ROI_START, left_points, right_points);
         if (code != MAPRA_SUCCESS)
             return code;
     }
