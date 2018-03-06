@@ -34,10 +34,15 @@ using namespace cv;
  * @param b_view Bird View on or off
  * @param image_start Start point in pixel (y-axis)
  * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
+ * @note calls alm(std::vector<Point2f> &, const int, const int) once for each side
  */
-int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part, 
+int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part,
         const int num_lines, const bool b_view, const int image_start);
 
+/**
+ * Same as above, just overloaded for one side
+ */
+static int alm(std::vector<Point2f> &points, const int num_part, const int num_lines);
 
 /**
  * Converts the polar coordiantes from a Hough Transform (lines) to points according to their start/end of each partition
@@ -50,9 +55,15 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
  * @note Storage order for both [left/right]_points: points belonging to same line are stored consecutively:
  *      Point_0(line_0), Point_1(line_0), Point_2(line_1), Point_3(line_1), ..., 
  *      Point_num_lines*2-1(line_num_lines-1), ..., Point_num_lines*num_part*2-1(line_num_lines*num_part-1) 
+ * @note calls get_points(std::vector<Vec2f> &, const int, const int, const int *, std::vector <Point2f> &) once for each side
  */
-int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines, const int num_part,
-               const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+static int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines, const int num_part,
+                      const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+
+/**
+ * Same as above, just overloaded for one side
+ */
+static int get_points(const std::vector<Vec2f> &lines, const int num_lines, const int num_part, const int *coords_part, std::vector<Point2f> &points);
 
 /**
  * Returns the two horizontal (x-coordinates) points (one for right/left half) with the maximum according to the histogram of the ROI
@@ -62,7 +73,7 @@ int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &r
  * @return Returns either MAPRA_SUCCESS or MAPRA_WARNING
  * @note reduce() function could be optimized with an additional roi constraint
  */
-int h_histogram(const Mat &input_img, const double roi, int *points);
+static int h_histogram(const Mat &input_img, const double roi, int *points);
 
 /**
  * Conducts a simple Hough line search in multiple partitions (in each only one line per side is found)
@@ -70,13 +81,12 @@ int h_histogram(const Mat &input_img, const double roi, int *points);
  * @param left_points Holds the found points of the left lane
  * @param right_points Holds the found points of the right
  * @param num_part Number of partitions per side
- * @param num_lines Number of lines per partition
  * @param b_view Bird View on or off
  * @param image_start Start point in pixel (y-axis)
  * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
  */
-int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part,
-        const int num_lines, const bool b_view, const int image_start);
+int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, 
+        const int num_part, const bool b_view, const int image_start);
 
 /**
  * Returns polar coordinates (rho and theta) of the found lines
@@ -99,10 +109,10 @@ int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f
  * @note: add further failsafe (one more bool to check wheter birdsview or not and then
  * add restrictions in function to restrict e.g. the angle of the second line, etc.)
  */
-int hough_lines_custom(const Mat &img, const float rho, const float theta,
-                     const int threshold, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
-                     const int linesMax, const int roi_start, const int roi_end, const bool b_view,
-                     const double min_theta = 0, const double max_theta = CV_PI);
+static int hough_lines_custom(const Mat &img, const float rho, const float theta,
+                              const int threshold, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
+                              const int linesMax, const int roi_start, const int roi_end, const bool b_view,
+                              const double min_theta = 0, const double max_theta = CV_PI);
 
 /**
  * Converts the points-pairs making up lines returned from alm() or partitoned_hough() with num_lines = 1
@@ -113,8 +123,14 @@ int hough_lines_custom(const Mat &img, const float rho, const float theta,
  * @param left_points Holds the points-pairs for the left lane
  * @param left_points Holds the points-pairs for the right lane
  * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
+ * @note Calls pair_conversion(std::vector<Point2f>) once for each side
  */
-int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+static int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+
+/**
+ * Same as above, just overloaded for one side
+ */
+static int pair_conversion(std::vector<Point2f> &points);
 
 /**
  * Applies the Hough Transformation on different sub-regions 
@@ -129,10 +145,8 @@ int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &rig
  * @note [left/right]_lines stores at the beginning num_lines lines of the first partition,
  * 		at the end num_lines lines of the last partition
  */
-int partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines,
-                      std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, const bool b_view);
-
-
+static int partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines,
+                             std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, const bool b_view);
 
 /**
  * Takes the histogram of the upper half of the image as a startig point for 
@@ -144,10 +158,15 @@ int partitioned_hough(const Mat &img, const int *part_coords, const int num_part
  * @param left_points The returned points which were found in the window search on the left side 
  * @param right_points The returned points which were found in the window search on the right side 
  * @return Returns either MAPRA_SUCCESS, MAPRA_WARNING
- * @note The output_points are stored the following way:
+ * @note Calls sliding_window_search(Mat &, const double, const int, const int, std::vector<Point2f> &, const bool) once for each side
  */
 int sliding_windows_search(Mat &input_img, const double roi, const int num_windows, const int width,
                            std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+
+/**
+ * Same as above, just overloaded for one side
+ */
+static int sliding_windows_search(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &points, const bool left);
 
 /**
  * Returns the (x or y) coordinates of the sub-domains
@@ -157,7 +176,7 @@ int sliding_windows_search(Mat &input_img, const double roi, const int num_windo
  * @param number of sub-domains
  * @param coords array of length number+1, returns the coordinates of the sub-domain borders (including start and end)
  */
-void sub_partition(const int start, const int end, const int number, const bool equidistant, int *coords);
+static void sub_partition(const int start, const int end, const int number, const bool equidistant, int *coords);
 
 /**
  * ### Deprecated ###
@@ -165,7 +184,7 @@ void sub_partition(const int start, const int end, const int number, const bool 
  * @param img is the image to be modified and returned
  * @param start is the vertical start where the roi is starting in percent [0;1]
  */
-void v_roi(Mat &img, const int start);
+static void v_roi(Mat &img, const int start);
 
 /**
  * Given two input-window-starting-points (from a h_histogram), search those in three different places along the y-axis 

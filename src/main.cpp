@@ -21,8 +21,6 @@ using namespace cv;
  * h: high, l: low
  */
 
-
-
 int main(int argc, char **argv)
 {
     if (argc != 4)
@@ -34,10 +32,14 @@ int main(int argc, char **argv)
     String input_dir = modify_dir(argv[1]);
     String input_file = argv[2];
     String result_dir = modify_dir(argv[3]);
+#ifndef NDEBUG
     std::cout << input_dir << ", " << result_dir << std::endl;
+#endif
     String image_location = input_dir + input_file;
-    Mat image, processed, bird;
+    Mat image;
+    Mat clone;
     image = imread(image_location, 1);
+    clone = image.clone();
 
     if (!image.data)
     {
@@ -45,26 +47,25 @@ int main(int argc, char **argv)
         return MAPRA_ERROR;
     }
 
-
     //#############################################################################################
     //######################################### Parameter File ####################################
     //#############################################################################################
-    
+
     //1 = part. Hough, 2 = ALM, 3 = Sliding Window, 4 = Multiple Window
-    const int ALGO = 1; //1,2,3,4
-    const double ROI_START = 0.6; //const
+    const int ALGO = 3;            //1,2,3,4
+    const double ROI_START = 0.53; //const
     //Amount of partitions and lines
-    const int NUM_PART = 2; //1-5
-    const int NUM_LINES = 3; //2-5
+    const int NUM_PART = 2;  //2-5
+    const int NUM_LINES = 5; //2-5
     //Sliding Window Constants
     const int W_NUM_WINDOWS = 10; //3-10
     const int W_WIDTH = 40;       //20, 40, 60, 80
 
     //Birdview Constants
-    const bool B_VIEW = false; //true, false
-    const double B_OFFSET_MID = 0.04; //const
-    const double B_OFFSET = 0.4; //const
-    const double B_OFFSET2 = 0.05; //const
+    const bool B_VIEW = true;          //true, false
+    const double B_OFFSET_MID = 0.04;  //const
+    const double B_OFFSET = 0.4;       //const
+    const double B_OFFSET2 = 0.05;     //const
     const double B_HEIGHT = ROI_START; //const
     Mat b_mat;
     Mat b_inv_mat;
@@ -82,7 +83,7 @@ int main(int argc, char **argv)
     //Edge detection filters
     //1 = canny, 2 = sobel_mag, 3 = sobel_par, 4 = color_thres
     //1; 2; 3; 4; 1,2; 1,3; 1,4; 2,3; 2,4; 3,4; 1,2,3; 2,3,4; 1,3,4; 1,2,4; 1,2,3,4
-    const std::vector<int> FILTERS = {1, 2}; 
+    const std::vector<int> FILTERS = {4};
     assert(FILTERS.size() >= 1);
     //tmp variables for filters; used to finetune parameters for
     //one filter or when more than one filter is used
@@ -92,7 +93,7 @@ int main(int argc, char **argv)
     int s_p_x = 10;
     int s_p_y = 60;
     int c_th = 220;
-    if(FILTERS.size() > 1)
+    if (FILTERS.size() > 1)
     {
         ca_th = 100;
         k = 3;
@@ -101,14 +102,14 @@ int main(int argc, char **argv)
         s_p_y = 60;
         c_th = 220;
     }
-    if(B_VIEW)
+    if (B_VIEW)
     {
         ca_th = 350;
         k = 5;
     }
     //Canny Constants
     const int CA_THRES = ca_th; //const
-    const int KERNEL = k; //const
+    const int KERNEL = k;       //const
 
     //Sobel Thresholding Constants
     const int S_MAG = s_m;
@@ -118,14 +119,13 @@ int main(int argc, char **argv)
     //Color Thresholding Constants
     const int C_THRES = c_th;
 
-
     //Fitting Constants
-    const int ORDER = NUM_PART; //const
+    const int ORDER = 4; //const
 
     //#############################################################################################
     //######################################### Program ###########################################
     //#############################################################################################
-    
+
     //**********************************************************
     //****************** Preliminary Setup *********************
     //**********************************************************
@@ -168,31 +168,31 @@ int main(int argc, char **argv)
     //Partitioned Hough
     if (ALGO == 1)
     {
-        code = hough(processed, left_points, right_points, NUM_PART, NUM_LINES, B_VIEW, I_START);
-        if(code != MAPRA_SUCCESS)
+        code = hough(image, left_points, right_points, NUM_PART, B_VIEW, I_START);
+        if (code != MAPRA_SUCCESS)
             return code;
     }
 
     //ALM
     if (ALGO == 2)
     {
-        code = alm(processed, left_points, right_points, NUM_PART, NUM_LINES, B_VIEW, I_START);
+        code = alm(image, left_points, right_points, NUM_PART, NUM_LINES, B_VIEW, I_START);
         if (code != MAPRA_SUCCESS)
             return code;
     }
 
     //Sliding Windows
-    if(ALGO == 3)
+    if (ALGO == 3)
     {
-        code = sliding_windows_search(processed, ROI_START, W_NUM_WINDOWS, W_WIDTH, left_points, right_points);
+        code = sliding_windows_search(image, ROI_START, W_NUM_WINDOWS, W_WIDTH, left_points, right_points);
         if (code != MAPRA_SUCCESS)
             return code;
     }
 
     //Window search
-    if(ALGO == 4)
+    if (ALGO == 4)
     {
-        code = window_search(processed, W_WIDTH, ROI_START, left_points, right_points);
+        code = window_search(image, W_WIDTH, ROI_START, left_points, right_points);
         if (code != MAPRA_SUCCESS)
             return code;
     }
@@ -203,19 +203,28 @@ int main(int argc, char **argv)
 
     std::vector<double> right_coeff;
     std::vector<double> left_coeff;
-   
+
+    poly_reg(left_points, right_points, left_coeff, right_coeff, ORDER);
+
     if (B_VIEW)
     {
-        //transform points from Bird View to regular view
-        std::vector<Point2f> tmp1 (left_points);
-        std::vector<Point2f> tmp2 (right_points);
-        perspectiveTransform(tmp1, left_points, b_inv_mat);
-        perspectiveTransform(tmp2, right_points, b_inv_mat);
+#ifndef NDEBUG
+        draw_poly(image, 0, left_coeff, right_coeff, ORDER);
+        show_image("bird", image, true);
+        draw_poly(clone, ROI_START, left_coeff, right_coeff, ORDER, b_inv_mat);
+        show_image("normal", clone, true);
+#endif
+        code = store_result(image, ROI_START, left_coeff, right_coeff, ORDER, result_dir, input_file, b_inv_mat);
+        if (code != MAPRA_SUCCESS)
+            return code;
     }
-    poly_reg(left_points, right_points, left_coeff, right_coeff, ORDER);
-    code = store_result(processed, ROI_START, left_coeff, right_coeff, ORDER, result_dir, input_file);
-    if (code != MAPRA_SUCCESS)
-        return code;
+    //in normal-view
+    else
+    {
+        code = store_result(image, ROI_START, left_coeff, right_coeff, ORDER, result_dir, input_file);
+        if (code != MAPRA_SUCCESS)
+            return code;
+    }
 
     return MAPRA_SUCCESS;
 }

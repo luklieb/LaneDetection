@@ -25,18 +25,22 @@ void draw_curve(Mat &image, const double roi, const std::vector<Point> &left_poi
  * @param left_coeff Holds the coefficients for the left lane polynomial
  * @param right_coeff Holds the coefficients for the right lane polynomial
  * @param order Order of polynomial (e.g. for quadradic polynomials the order is 2)
+ * @param b_inv Inverse perspective transform matrix (in order to go from Bird-View to normal-view)
+ *        if empty (=default argument), then draw_poly() will perform no perspective transformation
  */
-void draw_poly(Mat &image, const double roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order);
+void draw_poly(Mat &image, const double roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, 
+            const int order, const Mat &b_inv = Mat());
+
 
 /**
- * Takes an input vector of points and does a polynomal regression on it
+ * Takes an input vector of points and does a polynomial regression on it
  * It always fits a polynomial of order = num_points-1
  * @param points Vector holding the points to be fit
  * @param coeff Return vector holding the num_points coefficients
  * @note See here: http://mathworld.wolfram.com/LeastSquaresFittingPolynomial.html
  */
 void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points,
-              std::vector<double> &left_coeff, std::vector<double> &right_coeff, const int order);
+                  std::vector<double> &left_coeff, std::vector<double> &right_coeff, const int order);
 
 /**
  * Saves an color coded image after lane detection for the evaluation in file evaluate.py
@@ -48,7 +52,9 @@ void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f
  * @param order Order of polynomials
  * @param dir Path where the resulting image should be stored
  * @param file File name of the resulting image
+ * @param b_inv Inverse perspective transform matrix (in order to go from Bird-View to normal-view)
+ *        if empty (=default argument), then store_result() will perform no perspective transformation
  * @return Returns either MAPRA_SUCCESS or MAPRA_ERROR
  */
 int store_result(const Mat &image, const double &roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff,
-                 const int order, const String dir, const String file);
+                 const int order, const String dir, const String file, const Mat &b_inv = Mat());

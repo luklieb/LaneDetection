@@ -96,11 +96,8 @@ struct hough_cmp_gt
 //######################################### STATIC FCTS #######################################
 //#############################################################################################
 
-static int alm_(std::vector<Point2f> &points, const int num_part, const int num_lines)
+static int alm(std::vector<Point2f> &points, const int num_part, const int num_lines)
 {
-    
-    
-    
     assert(points.size() % 2 == 0);
 
     std::vector<std::vector<Point2f>> possible_points(num_lines);
@@ -154,21 +151,28 @@ static int alm_(std::vector<Point2f> &points, const int num_part, const int num_
     points.clear();
     points.insert(points.begin(), possible_points[index_tmp].begin(), possible_points[index_tmp].end());
 
+    assert(points.size() == 2u * num_part);
     if (points.size() != 2u * num_part)
         return MAPRA_WARNING;
     return MAPRA_SUCCESS;
 }
 
-static int get_points_(const std::vector<Vec2f> &lines, const int num_lines, const int num_part, const int *coords_part, std::vector<Point2f> &points)
+static int get_points(const std::vector<Vec2f> &lines, const int num_lines, const int num_part, const int *coords_part, std::vector<Point2f> &points)
 {
+    #ifndef NDEBUG
+    std::cout << "get_points: " << num_lines << ", " << num_part << std::endl;
+    #endif
+    assert(lines.size() == 1u*num_lines*num_part);
+    if(lines.size() != 1u*num_lines*num_part)
+        return MAPRA_WARNING;
     points.clear();
     int i = 0;
     int j = 0;
     Point2f pt1, pt2;
     //iterate over all lines
     //there are always num_lines in each num_part
-    //transform one line in polar coordinates (2 variables (roh, phi)) to one start point
-    //and one end point in cartesian coordiantes (2 variables (x,y) each)
+    //transform one line in polar coordinates (2 variables (roh, phi)) to 
+    //one start point and one end point in cartesian coordiantes (2 variables (x,y) each)
     for (auto p : lines)
     {
         if (i >= num_part)
@@ -192,165 +196,15 @@ static int get_points_(const std::vector<Vec2f> &lines, const int num_lines, con
     return MAPRA_SUCCESS;
 }
 
-static int pair_conversion_(std::vector<Point2f> &points)
+static int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines,
+                      const int num_part, const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
-    //copy
-    std::vector<Point2f> cpy(points);
-    int size = points.size();
-    assert(size % 2 == 0);
-    points.clear();
-    //first point can stay
-    points.push_back(cpy[0]);
-    //compute mean of x-coordinates of adjacent lines
-    for (int i = 1; i < size - 1; i += 2)
-    {
-        assert(cpy[i].y == cpy[i+1].y);
-        points.push_back(Point2f(0.5 * (cpy[i].x + cpy[i + 1].x), cpy[i].y));
-    }
-    //last point can stay
-    points.push_back(cpy[size - 1]);
-    if (points.size() % 2 != 0)
-        return MAPRA_WARNING;
-    return MAPRA_SUCCESS;
-}
-
-static int sliding_windows_search_(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &points, const bool left)
-{
-
-    int upper_histo[2];
-    points.clear();
-    //has to be of type Point. Stores the idizes of white (non-black) pixels
-    std::vector<Point> non_zero;
-    int code = h_histogram(input_img, roi, upper_histo);
-    if (code != MAPRA_SUCCESS)
-        return code;
-    std::cout << "histo done: " << upper_histo[0] << ", " << upper_histo[1] << std::endl;
-    //offsets from center points of window
-    const int height = input_img.rows / num_windows;
-    const int y_offset = 0.5 * height;
-    const int x_offset = 0.5 * width;
-    int x_tmp = 0;
-    int x;
-    if (left)
-    {
-        x = upper_histo[0];
-        if (x - x_offset < 0)
-            x = x_offset;
-    }
-    else
-    {
-        x = upper_histo[1];
-        if (x + x_offset >= input_img.cols)
-            x = input_img.cols - 1 - x_offset;
-    }
-
-    assert(x - x_offset >= 0);
-    assert(x - x_offset + width < input_img.cols);
-    int y_tmp = 0;
-    int y = input_img.rows - y_offset;
-
-    for (int i = 0; i < num_windows; ++i)
-    {
-        //find all indizes of white (non black) pixels --> so we can compute the mean of them later
-        std::cout << "nonzero"
-                  << " x: " << x << ", y: " << y << std::endl;
-        findNonZero(Mat(input_img, Rect(x - x_offset, y - y_offset, width, height)), non_zero);
-        std::cout << "nonzero done" << std::endl;
-
-        x_tmp = 0;
-        y_tmp = 0;
-
-        //if non-black pixels are found
-        if (non_zero.size() > 0)
-        {
-            //averages all coordinates of non-zero pixels --> new output coordinates
-            //x_tmp becomes center of new search window
-            for (auto &p : non_zero)
-            {
-                x_tmp += p.x + x - x_offset;
-                y_tmp += p.y + y - y_offset;
-            }
-            x_tmp /= non_zero.size();
-            y_tmp /= non_zero.size();
-        }
-        //if no white pixels (lanes) are found, then just use the former coordinates to create current coordinates
-        else
-        {
-            //if enough points are already found, use the previous 2 to linearly extrapolate to the current point
-            if (i >= 2)
-            {
-                double slope = (points[i - 1].x - points[i - 2].x) / (points[i - 1].y - points[i - 2].y);
-                y_tmp = y;
-                x_tmp = x - (height * slope);
-            }
-            else //if not, move up in a straight line
-            {
-                x_tmp = x;
-                y_tmp = y;
-            }
-#ifndef NDEBUG
-            std::cout << "multiple_window no white pixels found" << std::endl;
-#endif
-        }
-
-        points.push_back(Point2f(x_tmp, y_tmp));
-
-        //move search window one step down
-        y -= height;
-        x = x_tmp;
-        //if new search coordinates are not in the image, they are probably not part of a road lane
-        assert(x + x_offset < input_img.cols);
-        if (x + x_offset >= input_img.cols)
-            return MAPRA_WARNING;
-        assert(x - x_offset >= 0);
-        if (x - x_offset < 0)
-            return MAPRA_WARNING;
-
-        non_zero.clear();
-    }
-    assert(points.size() == (unsigned int)num_windows);
-    if (points.size() != (unsigned int)num_windows)
-        return MAPRA_WARNING;
-    return MAPRA_SUCCESS;
-}
-
-//#############################################################################################
-//######################################### INTERFACE #########################################
-//#############################################################################################
-
-int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part, const int num_lines,
-        const bool b_view, const int image_start)
-{
-    int coords_part[num_part + 1];
-    sub_partition(image_start, img.rows, num_part, true, coords_part);
-    std::vector<Vec2f> left_lines;
-    std::vector<Vec2f> right_lines;
-    int code = partitioned_hough(img, coords_part, num_part, num_lines, left_lines, right_lines, b_view);
-    if (code != MAPRA_SUCCESS)
-        return code;
-    code = get_points(left_lines, right_lines, num_lines, num_part, coords_part, left_points, right_points);
-    if (code != MAPRA_SUCCESS)
-        return code;
-
-    int code1 = alm_(left_points, num_part, num_lines);
-    int code2 = alm_(right_points, num_part, num_lines);
-
-    code = pair_conversion(left_points, right_points);
-    if (code != MAPRA_SUCCESS)
-        return code;
+    int code1 = get_points(left_lines, num_lines, num_part, coords_part, left_points);
+    int code2 = get_points(right_lines, num_lines, num_part, coords_part, right_points);
     return check_codes(code1, code2);
 }
 
-
-int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines, 
-    const int num_part, const int *coords_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
-{
-    int code1 = get_points_(left_lines, num_lines, num_part, coords_part, left_points);
-    int code2 = get_points_(right_lines, num_lines, num_part, coords_part, right_points);
-    return check_codes(code1, code2);
-}
-
-int h_histogram(const Mat &input_img, const double roi, int *x_points)
+static int h_histogram(const Mat &input_img, const double roi, int *x_points)
 {
     std::vector<int> histo;
     //"sums up" along y-axis for each column -> returns a "row vector"
@@ -382,29 +236,9 @@ int h_histogram(const Mat &input_img, const double roi, int *x_points)
     return MAPRA_SUCCESS;
 }
 
-int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part,
-          const int num_lines, const bool b_view, const int image_start)
-{
-    int coords_part[num_part + 1];
-    sub_partition(image_start, img.rows, num_part, true, coords_part);
-    std::vector<Vec2f> left_lines;
-    std::vector<Vec2f> right_lines;
-    int code = partitioned_hough(img, coords_part, num_part, 1, left_lines, right_lines, b_view);
-    if (code != MAPRA_SUCCESS)
-        return code;
-    code = get_points(left_lines, right_lines, num_lines, num_part, coords_part, left_points, right_points);
-    assert(left_points.size() == 2u*num_part && right_points.size() == 2u*num_part);
-    if(left_points.size() != 2u*num_part || right_points.size() != 2u*num_part)
-        return MAPRA_WARNING;
-    pair_conversion(left_points, right_points);
-    if (code != MAPRA_SUCCESS)
-        return code;
-    return MAPRA_SUCCESS;
-}
-
-int hough_lines_custom(const Mat &img, const float rho, const float theta, const int threshold,
-                     std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
-                     const int lines_max, const int roi_start, const int roi_end, const bool b_view, const double min_theta, const double max_theta)
+static int hough_lines_custom(const Mat &img, const float rho, const float theta, const int threshold,
+                              std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines,
+                              const int lines_max, const int roi_start, const int roi_end, const bool b_view, const double min_theta, const double max_theta)
 {
 
     //Additional parameters, that can be changed, but make everything way more complicated
@@ -632,7 +466,6 @@ int hough_lines_custom(const Mat &img, const float rho, const float theta, const
         int r = idx - (n + 1) * (numrho + 2) - 1;
         line.rho = (r - (numrho - 1) * 0.5f) * rho;
         line.angle = static_cast<float>(min_theta) + n * theta;
-        //std::cout << "i: " << i << ", last: " << last_angle << ", lineangle: " << line.angle << std::endl;
         if (i > 0 && line.angle >= last_angle - range && line.angle <= last_angle + range)
         {
             std::cout << "continue" << std::endl;
@@ -650,14 +483,38 @@ int hough_lines_custom(const Mat &img, const float rho, const float theta, const
     return MAPRA_SUCCESS;
 }
 
-int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+static int pair_conversion(std::vector<Point2f> &points)
 {
-    int code1 = pair_conversion_(left_points);
-    int code2 = pair_conversion_(right_points);
+    //copy
+    std::vector<Point2f> cpy(points);
+    int size = points.size();
+    assert(size % 2 == 0);
+    points.clear();
+    //first point can stay
+    points.push_back(cpy[0]);
+    //compute mean of x-coordinates of adjacent lines
+    for (int i = 1; i < size - 1; i += 2)
+    {
+        assert(cpy[i].y == cpy[i + 1].y);
+        points.push_back(Point2f(0.5 * (cpy[i].x + cpy[i + 1].x), cpy[i].y));
+    }
+    //last point can stay
+    points.push_back(cpy[size - 1]);
+
+    assert(points.size() == 0.5*cpy.size()+1.);
+    if (points.size() != 0.5 * cpy.size() + 1.)
+        return MAPRA_WARNING;
+    return MAPRA_SUCCESS;
+}
+
+static int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+{
+    int code1 = pair_conversion(left_points);
+    int code2 = pair_conversion(right_points);
     return check_codes(code1, code2);
 }
 
-int partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, const bool b_view)
+static int partitioned_hough(const Mat &img, const int *part_coords, const int num_part, const int num_lines, std::vector<Vec2f> &left_lines, std::vector<Vec2f> &right_lines, const bool b_view)
 {
     left_lines.clear();
     right_lines.clear();
@@ -681,15 +538,113 @@ int partitioned_hough(const Mat &img, const int *part_coords, const int num_part
     return MAPRA_SUCCESS;
 }
 
-int sliding_windows_search(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+static int sliding_windows_search(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &points, const bool left)
 {
-    int code1 = sliding_windows_search_(input_img, roi, num_windows, width, left_points, true);
-    int code2 = sliding_windows_search_(input_img, roi, num_windows, width, right_points, false);
-    return check_codes(code1, code2);
+    int upper_histo[2];
+    points.clear();
+    //has to be of type Point. Stores the idizes of white (non-black) pixels
+    std::vector<Point> non_zero;
+    int code = h_histogram(input_img, roi, upper_histo);
+    if (code != MAPRA_SUCCESS)
+        return code;
+#ifndef NDEBUG
+    std::cout << "histo done: " << upper_histo[0] << ", " << upper_histo[1] << std::endl;
+#endif
+    //offsets from center points of window
+    const int height = input_img.rows / num_windows;
+    const int y_offset = 0.5 * height + 1;
+    const int x_offset = 0.5 * width;
+    int x_tmp = 0;
+    int x;
+    if (left)
+    {
+        x = upper_histo[0];
+        if (x - x_offset < 0)
+            x = x_offset;
+    }
+    else
+    {
+        x = upper_histo[1];
+        if (x + x_offset >= input_img.cols)
+            x = input_img.cols - 1 - x_offset;
+    }
+
+    assert(x - x_offset >= 0);
+    assert(x - x_offset + width < input_img.cols);
+    int y_tmp = 0;
+    int y = input_img.rows - y_offset;
+
+    for (int i = 0; i < num_windows; ++i)
+    {
+        //find all indizes of white (non black) pixels --> so we can compute the mean of them later
+        #ifndef NDEBUG
+        std::cout << "nonzero" << " x: " << x-x_offset << ", y: " << y-y_offset << std::endl;
+        std::cout << "image c: " << input_img.cols << ", r: " << input_img.rows
+            << ", width: " << width << ", height: " << height << std::endl;
+        #endif
+        findNonZero(Mat(input_img, Rect(x - x_offset, y - y_offset, width, height)), non_zero);
+        #ifndef NDEBUG
+        std::cout << "nonzero done in sliding window: " << i << std::endl;
+        #endif
+
+        x_tmp = 0;
+        y_tmp = 0;
+
+        //if non-black pixels are found
+        if (non_zero.size() > 0)
+        {
+            //averages all coordinates of non-zero pixels --> new output coordinates
+            //x_tmp becomes center of new search window
+            for (auto &p : non_zero)
+            {
+                x_tmp += p.x + x - x_offset;
+                y_tmp += p.y + y - y_offset;
+            }
+            x_tmp /= non_zero.size();
+            y_tmp /= non_zero.size();
+        }
+        //if no white pixels (lanes) are found, then just use the former coordinates to create current coordinates
+        else
+        {
+            //if enough points are already found, use the previous 2 to linearly extrapolate to the current point
+            if (i >= 2)
+            {
+                double slope = (points[i - 1].x - points[i - 2].x) / (points[i - 1].y - points[i - 2].y);
+                y_tmp = y;
+                x_tmp = x - (height * slope);
+            }
+            else //if not, move up in a straight line
+            {
+                x_tmp = x;
+                y_tmp = y;
+            }
+#ifndef NDEBUG
+            std::cout << "multiple_window no white pixels found" << std::endl;
+#endif
+        }
+
+        points.push_back(Point2f(x_tmp, y_tmp));
+
+        //move search window one step down
+        y -= height;
+        x = x_tmp;
+        //if new search coordinates are not in the image, they are probably not part of a road lane
+        assert(x + x_offset < input_img.cols);
+        if (x + x_offset >= input_img.cols)
+            return MAPRA_WARNING;
+        assert(x - x_offset >= 0);
+        if (x - x_offset < 0)
+            return MAPRA_WARNING;
+
+        non_zero.clear();
+    }
+    assert(points.size() == (unsigned int)num_windows);
+    if (points.size() != (unsigned int)num_windows)
+        return MAPRA_WARNING;
+    return MAPRA_SUCCESS;
 }
 
-
-void sub_partition(const int start, const int end, const int number, const bool equidistant, int *coords)
+static void sub_partition(const int start, const int end, const int number, const bool equidistant, int *coords)
 {
     assert(end > start);
     double factor = 1.;
@@ -711,9 +666,67 @@ void sub_partition(const int start, const int end, const int number, const bool 
     //coords[number] = end;
 }
 
-void v_roi(Mat &img, const double start)
+static void v_roi(Mat &img, const double start)
 {
     rectangle(img, Point(0, 0), Point(img.cols, img.rows * start), Scalar(0), CV_FILLED);
+}
+
+//#############################################################################################
+//######################################### INTERFACE #########################################
+//#############################################################################################
+
+int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part, const int num_lines,
+        const bool b_view, const int image_start)
+{
+    int coords_part[num_part + 1];
+    sub_partition(image_start, img.rows, num_part, true, coords_part);
+    std::vector<Vec2f> left_lines;
+    std::vector<Vec2f> right_lines;
+    int code = partitioned_hough(img, coords_part, num_part, num_lines, left_lines, right_lines, b_view);
+    if (code != MAPRA_SUCCESS)
+        return code;
+    code = get_points(left_lines, right_lines, num_lines, num_part, coords_part, left_points, right_points);
+    if (code != MAPRA_SUCCESS)
+        return code;
+
+    int code1 = alm(left_points, num_part, num_lines);
+    int code2 = alm(right_points, num_part, num_lines);
+
+    code = pair_conversion(left_points, right_points);
+    if (code != MAPRA_SUCCESS)
+        return code;
+    return check_codes(code1, code2);
+}
+
+int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part,
+            const bool b_view, const int image_start)
+{
+    int coords_part[num_part + 1];
+    sub_partition(image_start, img.rows, num_part, true, coords_part);
+    std::vector<Vec2f> left_lines;
+    std::vector<Vec2f> right_lines;
+    int code = partitioned_hough(img, coords_part, num_part, 1, left_lines, right_lines, b_view);
+    #ifndef NDEBUG
+    std::cout << left_lines.size() << ", " << right_lines.size() << std::endl;
+    #endif
+    if (code != MAPRA_SUCCESS)
+        return code;
+    code = get_points(left_lines, right_lines, 1, num_part, coords_part, left_points, right_points);
+    assert(left_points.size() == 2u * num_part && right_points.size() == 2u * num_part);
+
+    if (left_points.size() != 2u * num_part || right_points.size() != 2u * num_part)
+        return MAPRA_WARNING;
+    pair_conversion(left_points, right_points);
+    if (code != MAPRA_SUCCESS)
+        return code;
+    return MAPRA_SUCCESS;
+}
+
+int sliding_windows_search(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+{
+    int code1 = sliding_windows_search(input_img, roi, num_windows, width, left_points, true);
+    int code2 = sliding_windows_search(input_img, roi, num_windows, width, right_points, false);
+    return check_codes(code1, code2);
 }
 
 int window_search(const Mat &img, const int window_width, const double roi, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)

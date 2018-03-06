@@ -29,25 +29,31 @@ static void draw_curve_(Mat &image, const double roi, const std::vector<Point> &
         img[r * image.cols + static_cast<int>((sol[0] * r * r + sol[1] * r + sol[2]))] = 128;
 }
 
-static void draw_poly_(Mat &image, const double roi, const std::vector<double> &coeff, const int order)
+static void draw_poly_(Mat &image, const double roi, const std::vector<double> &coeff, const int order, const Mat &b_inv)
 {
     assert(coeff.size() == (unsigned int)order + 1);
     double column = 0.;
+    std::vector<Point2f> pts;
+    std::vector<Point2f> pts_trans;
     for (int r = roi * image.rows; r < image.rows; ++r)
     {
         for (int c = 0; c <= order; ++c)
         {
             column += std::pow(r, c) * coeff[c];
         }
-        //draw with a width of 5 pixels
-        image.at<uchar>(r, static_cast<int>(column - 2)) = 128;
-        image.at<uchar>(r, static_cast<int>(column - 1)) = 128;
-        image.at<uchar>(r, static_cast<int>(column)) = 128;
-        image.at<uchar>(r, static_cast<int>(column + 1)) = 128;
-        image.at<uchar>(r, static_cast<int>(column + 2)) = 128;
+        pts.push_back(Point2f(column, r));
         column = 0.;
     }
+    if(b_inv.rows == 3 && b_inv.cols == 3){
+        perspectiveTransform(pts, pts_trans, b_inv);
+        for(auto p = pts_trans.begin(); p != pts_trans.end()-1; ++p)
+            line(image, *p, *(p+1), Scalar(255), 5);
+    }else{
+        for (auto p = pts.begin(); p != pts.end() - 1; ++p)
+            line(image, *p, *(p + 1), Scalar(255), 5);
+    }
 }
+
 
 static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &coeff, const int order)
 {
@@ -58,7 +64,7 @@ static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &c
     Mat rhs = Mat(num_points, 1, CV_64F);
     Mat solution = Mat_<double>();
 
-    //constructs simple matrix (not Vandermonde matrix)
+    //constructs simple least squares regression matrix (not Vandermonde matrix)
     for (int i = 0; i < num_points; ++i)
     {
         for (int j = 0; j <= order; ++j)
@@ -73,8 +79,6 @@ static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &c
     solve(lhs, rhs, solution, DECOMP_QR);
 
     const double *sol = solution.ptr<double>();
-    //coeff.resize(num_points);
-    //coeff.insert(coeff.begin(), sol[0], sol[num_points-1]);
     for (int i = 0; i <= order; ++i)
         coeff.push_back(sol[i]);
 }
@@ -83,6 +87,7 @@ static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &c
 //######################################### INTERFACE #########################################
 //#############################################################################################
 
+
 //deprecated
 void draw_curve(Mat &image, const double roi, const std::vector<Point> &left_points, const std::vector<Point> &right_points)
 {
@@ -90,10 +95,10 @@ void draw_curve(Mat &image, const double roi, const std::vector<Point> &left_poi
     draw_curve_(image, roi, right_points);
 }
 
-void draw_poly(Mat &image, const double roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order)
+void draw_poly(Mat &image, const double roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order, const Mat &b_inv)
 {
-    draw_poly_(image, roi, left_coeff, order);
-    draw_poly_(image, roi, right_coeff, order);
+    draw_poly_(image, roi, left_coeff, order, b_inv);
+    draw_poly_(image, roi, right_coeff, order, b_inv);
 }
 
 void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points, std::vector<double> &left_coeff, std::vector<double> &right_coeff, const int order)
@@ -102,14 +107,21 @@ void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f
     poly_reg_(right_points, right_coeff, order);
 }
 
-int store_result(const Mat &image, const double &roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order, const String dir, const String file)
+int store_result(const Mat &image, const double &roi, const std::vector<double> &left_coeff,
+                 const std::vector<double> &right_coeff, const int order, const String dir, const String file, const Mat &b_inv)
 {
     //new red image
     assert(left_coeff.size() == right_coeff.size() && left_coeff.size() == 1u + order);
     if (left_coeff.size() != right_coeff.size() || right_coeff.size() != 1u + order)
         return MAPRA_ERROR;
+
     Mat result(image.rows, image.cols, CV_8UC3, Scalar(0, 0, 255));
     int start = 0, end = 0;
+    //if B_View is used, then we need to transform the pixels to be drawn
+    std::vector<Point2f> points_l;
+    std::vector<Point2f> points_l_trans;
+    std::vector<Point2f> points_r;
+    std::vector<Point2f> points_r_trans;
 
     for (int r = roi * image.rows; r < image.rows; ++r)
     {
@@ -120,14 +132,46 @@ int store_result(const Mat &image, const double &roi, const std::vector<double> 
         }
         if (start <= end)
         {
-            line(result, Point(start, r), Point(end, r), Scalar(255, 0, 255));
+            points_l.push_back(Point2f(start, r));
+            points_r.push_back(Point2f(end, r));
         }
         start = 0;
         end = 0;
     }
+    //if a valid b_inv Mat was used as an argument
+    if (b_inv.rows == 3 && b_inv.cols == 3)
+    {
+        //transform the found points from Bird-View to normal-view
+        perspectiveTransform(points_l, points_l_trans, b_inv);
+        perspectiveTransform(points_r, points_r_trans, b_inv);
+        Point pts[1][4];
+        int npt[1] = {4};
+        assert(points_l_trans.size() == points_r_trans.size());
+        for (unsigned int i = 0; i < points_l_trans.size() - 1; i += 1)
+        {
+            //create polygons in order to fill gaps inbetween points on each side
+            pts[0][0] = points_l_trans[i];
+            pts[0][1] = points_l_trans[i + 1];
+            pts[0][3] = points_r_trans[i];
+            pts[0][2] = points_r_trans[i + 1];
+            const Point *pts_ptr[1] = {pts[0]};
+            fillPoly(result, pts_ptr, npt, 1, Scalar(255, 0, 255));
+        }
+    }
+    //we are already in normal-view
+    else
+    {
+        for (unsigned int i = 0; i < points_l.size(); ++i)
+        {
+            //just connect corresponding pixels on same row with each other
+            line(result, points_l[i], points_r[i], Scalar(255, 0, 255));
+        }
+    }
+
 #ifndef NDEBUG
     std::cout << "File written to path: " << dir + file << std::endl;
 #endif
+
     imwrite(dir + file, result);
     return MAPRA_SUCCESS;
 }
