@@ -28,9 +28,8 @@ void draw_curve(Mat &image, const double roi, const std::vector<Point> &left_poi
  * @param b_inv Inverse perspective transform matrix (in order to go from Bird-View to normal-view)
  *        if empty (=default argument), then draw_poly() will perform no perspective transformation
  */
-void draw_poly(Mat &image, const double roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, 
-            const int order, const Mat &b_inv = Mat());
-
+void draw_poly(Mat &image, const double roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff,
+               const int order, const Mat &b_inv = Mat());
 
 /**
  * Takes an input vector of points and does a polynomial regression on it
@@ -40,7 +39,7 @@ void draw_poly(Mat &image, const double roi, const std::vector<double> &left_coe
  * @note See here: http://mathworld.wolfram.com/LeastSquaresFittingPolynomial.html
  */
 void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points,
-                  std::vector<double> &left_coeff, std::vector<double> &right_coeff, const int order);
+              std::vector<double> &left_coeff, std::vector<double> &right_coeff, const int order);
 
 /**
  * Saves an color coded image after lane detection for the evaluation in file evaluate.py

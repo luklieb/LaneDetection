@@ -5,7 +5,7 @@
 //#############################################################################################
 
 //deprecated
-static void draw_curve_(Mat &image, const double roi, const std::vector<Point> &points)
+static void draw_curve(Mat &image, const double roi, const std::vector<Point> &points)
 {
     assert(points.size() >= 3);
     uchar *img = image.ptr();
@@ -29,7 +29,7 @@ static void draw_curve_(Mat &image, const double roi, const std::vector<Point> &
         img[r * image.cols + static_cast<int>((sol[0] * r * r + sol[1] * r + sol[2]))] = 128;
 }
 
-static void draw_poly_(Mat &image, const double roi, const std::vector<double> &coeff, const int order, const Mat &b_inv)
+static void draw_poly(Mat &image, const double roi, const std::vector<double> &coeff, const int order, const Mat &b_inv)
 {
     assert(coeff.size() == (unsigned int)order + 1);
     double column = 0.;
@@ -44,18 +44,20 @@ static void draw_poly_(Mat &image, const double roi, const std::vector<double> &
         pts.push_back(Point2f(column, r));
         column = 0.;
     }
-    if(b_inv.rows == 3 && b_inv.cols == 3){
+    if (b_inv.rows == 3 && b_inv.cols == 3)
+    {
         perspectiveTransform(pts, pts_trans, b_inv);
-        for(auto p = pts_trans.begin(); p != pts_trans.end()-1; ++p)
-            line(image, *p, *(p+1), Scalar(255), 5);
-    }else{
+        for (auto p = pts_trans.begin(); p != pts_trans.end() - 1; ++p)
+            line(image, *p, *(p + 1), Scalar(255), 5);
+    }
+    else
+    {
         for (auto p = pts.begin(); p != pts.end() - 1; ++p)
             line(image, *p, *(p + 1), Scalar(255), 5);
     }
 }
 
-
-static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &coeff, const int order)
+static void poly_reg(const std::vector<Point2f> &points, std::vector<double> &coeff, const int order)
 {
     assert(points.size() >= (unsigned int)order + 1);
     coeff.clear();
@@ -87,24 +89,23 @@ static void poly_reg_(const std::vector<Point2f> &points, std::vector<double> &c
 //######################################### INTERFACE #########################################
 //#############################################################################################
 
-
 //deprecated
 void draw_curve(Mat &image, const double roi, const std::vector<Point> &left_points, const std::vector<Point> &right_points)
 {
-    draw_curve_(image, roi, left_points);
-    draw_curve_(image, roi, right_points);
+    draw_curve(image, roi, left_points);
+    draw_curve(image, roi, right_points);
 }
 
 void draw_poly(Mat &image, const double roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff, const int order, const Mat &b_inv)
 {
-    draw_poly_(image, roi, left_coeff, order, b_inv);
-    draw_poly_(image, roi, right_coeff, order, b_inv);
+    draw_poly(image, roi, left_coeff, order, b_inv);
+    draw_poly(image, roi, right_coeff, order, b_inv);
 }
 
 void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f> &right_points, std::vector<double> &left_coeff, std::vector<double> &right_coeff, const int order)
 {
-    poly_reg_(left_points, left_coeff, order);
-    poly_reg_(right_points, right_coeff, order);
+    poly_reg(left_points, left_coeff, order);
+    poly_reg(right_points, right_coeff, order);
 }
 
 int store_result(const Mat &image, const double &roi, const std::vector<double> &left_coeff,
