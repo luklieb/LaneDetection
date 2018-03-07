@@ -20,6 +20,26 @@ void callback_1(int slider,void *data){
     data[1] = (void *)para;
 }
 
+void callback_1(int slider, void *data)
+{
+    const Point2f b_p2[4] = {Point2f((0.5 - ((double *)data[1])[2] - data[1][1]) * image.cols, 0),
+                             Point2f((0.5 + data[1][2] + data[1][2]) * image.cols, 0),
+                             Point2f((0.5 + data[1][2] + data[1][2]) * image.cols, image.rows),
+                             Point2f((0.5 - data[1][2] - data[1][2]) * image.cols, image.rows)};
+
+    line(image, b_p2[0], b_p2[1], Scalar(255));
+    line(image, b_p2[0], b_p2[2], Scalar(255));
+    line(image, b_p2[0], b_p2[3], Scalar(255));
+    line(image, b_p2[1], b_p2[2], Scalar(255));
+    line(image, b_p2[1], b_p2[3], Scalar(255));
+    line(image, b_p2[2], b_p2[3], Scalar(255));
+    show_image("polylines", image, true);
+    double para[3];
+    void *data[2];
+    data[0] = (void *)&image;
+    data[1] = (void *)para;
+}
+
 //mat from Kitti calib data
 double mat [3][3] = {{9.999239000000e-01, 9.837760000000e-03, -7.445048000000e-03 }, 
     {-9.869795000000e-03, 9.999421000000e-01, -4.278459000000e-03}, 

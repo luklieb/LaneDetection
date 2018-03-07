@@ -21,6 +21,7 @@ using namespace cv;
  * h: high, l: low
  */
 
+
 int main(int argc, char **argv)
 {
     if (argc != 4)
@@ -52,75 +53,87 @@ int main(int argc, char **argv)
     //#############################################################################################
 
     //1 = part. Hough, 2 = ALM, 3 = Sliding Window, 4 = Multiple Window
-    const int ALGO = 3;            //1,2,3,4
-    const double ROI_START = 0.53; //const
+    const int ALGO = 4;            //1,2,3,4
     //Amount of partitions and lines
-    const int NUM_PART = 2;  //2-5
-    const int NUM_LINES = 5; //2-5
+    int NUM_PART = 2;  //2-5
+    int NUM_LINES = 5; //2-5
     //Sliding Window Constants
-    const int W_NUM_WINDOWS = 10; //3-10
-    const int W_WIDTH = 40;       //20, 40, 60, 80
+    int W_NUM_WINDOWS = 10; //3-10
+    int W_WIDTH = 40;       //20, 40, 60, 80
 
     //Birdview Constants
-    const bool B_VIEW = true;          //true, false
-    const double B_OFFSET_MID = 0.04;  //const
-    const double B_OFFSET = 0.4;       //const
-    const double B_OFFSET2 = 0.05;     //const
-    const double B_HEIGHT = ROI_START; //const
+    bool B_VIEW = true;          //true, false
+    double B_OFFSET_MID = 0.04;  //const
+    double B_OFFSET = 0.4;       //const
+    double B_OFFSET2 = 0.05;     //const
+    double B_HEIGHT = 0.56; //const
     Mat b_mat;
     Mat b_inv_mat;
 
-    int I_START;
-    if (B_VIEW)
-    {
-        I_START = 0;
-    }
-    else
-    {
-        I_START = ROI_START * image.rows;
-    }
+    double ROI_START = 0.56; //const
+    if(B_VIEW)
+        ROI_START = 0.;
 
     //Edge detection filters
     //1 = canny, 2 = sobel_mag, 3 = sobel_par, 4 = color_thres
     //1; 2; 3; 4; 1,2; 1,3; 1,4; 2,3; 2,4; 3,4; 1,2,3; 2,3,4; 1,3,4; 1,2,4; 1,2,3,4
-    const std::vector<int> FILTERS = {4};
+    std::vector<int> FILTERS = {1,2};
     assert(FILTERS.size() >= 1);
-    //tmp variables for filters; used to finetune parameters for
-    //one filter or when more than one filter is used
-    int ca_th = 100;
-    int k = 3;
-    int s_m = 155;
-    int s_p_x = 10;
-    int s_p_y = 60;
-    int c_th = 220;
-    if (FILTERS.size() > 1)
-    {
-        ca_th = 100;
-        k = 3;
-        s_m = 155;
-        s_p_x = 10;
-        s_p_y = 60;
-        c_th = 220;
-    }
-    if (B_VIEW)
-    {
-        ca_th = 350;
-        k = 5;
-    }
-    //Canny Constants
-    const int CA_THRES = ca_th; //const
-    const int KERNEL = k;       //const
 
-    //Sobel Thresholding Constants
-    const int S_MAG = s_m;
-    const int S_PAR_X = s_p_x;
-    const int S_PAR_Y = s_p_y;
+    //Canny Parameter
+    int CA_THRES; //const
+    int KERNEL;       //const
+    //Sobel Thresholding Parameter
+    int S_MAG;
+    int S_PAR_X;
+    int S_PAR_Y;
+    //Color Thresholding Parameter
+    int C_THRES;
 
-    //Color Thresholding Constants
-    const int C_THRES = c_th;
+    //parameters tuned by hand according to 4 different scenarios, 
+    //which have the largest effect on filters
+    if (!B_VIEW && FILTERS.size() > 1)
+    {
+        CA_THRES = 40;
+        KERNEL = 3;
+        S_MAG = 90;
+        S_PAR_X = 200;
+        S_PAR_Y = 100;
+        C_THRES = 150;
+    }
+    if (B_VIEW && FILTERS.size() > 1)
+    {
+        CA_THRES = 250;
+        KERNEL = 5;
+        S_MAG = 50;
+        S_PAR_X = 15;
+        S_PAR_Y = 150;
+        C_THRES = 150;
+    }
+    if (!B_VIEW && FILTERS.size() == 1)
+    {
+        CA_THRES = 350;
+        KERNEL = 5;
+        S_MAG = 240;
+        S_PAR_X = 200;
+        S_PAR_Y = 100;
+        C_THRES = 225;
+    }
+    if (B_VIEW && FILTERS.size() == 1)
+    {
+        CA_THRES = 350;
+        KERNEL = 5;
+        S_MAG = 125;
+        S_PAR_X = 10;
+        S_PAR_Y = 100;
+        C_THRES = 210;
+    }
+
 
     //Fitting Constants
-    const int ORDER = 4; //const
+    int ORDER = 2; //const
+    if(ALGO == 4)
+        ORDER = 2;
 
     //#############################################################################################
     //######################################### Program ###########################################
@@ -168,7 +181,7 @@ int main(int argc, char **argv)
     //Partitioned Hough
     if (ALGO == 1)
     {
-        code = hough(image, left_points, right_points, NUM_PART, B_VIEW, I_START);
+        code = hough(image, left_points, right_points, NUM_PART, B_VIEW, ROI_START);
         if (code != MAPRA_SUCCESS)
             return code;
     }
@@ -176,7 +189,7 @@ int main(int argc, char **argv)
     //ALM
     if (ALGO == 2)
     {
-        code = alm(image, left_points, right_points, NUM_PART, NUM_LINES, B_VIEW, I_START);
+        code = alm(image, left_points, right_points, NUM_PART, NUM_LINES, B_VIEW, ROI_START);
         if (code != MAPRA_SUCCESS)
             return code;
     }

@@ -32,12 +32,12 @@ using namespace cv;
  * @param num_part Number of partitions per side
  * @param num_lines Number of lines per partition
  * @param b_view Bird View on or off
- * @param image_start Start point in pixel (y-axis)
+ * @param roi Start point of ROI in percent (y-axis)
  * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
  * @note calls alm(std::vector<Point2f> &, const int, const int) once for each side
  */
 int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part,
-        const int num_lines, const bool b_view, const int image_start);
+        const int num_lines, const bool b_view, const double roi);
 
 /**
  * Conducts a simple Hough line search in multiple partitions (in each only one line per side is found)
@@ -46,11 +46,11 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
  * @param right_points Holds the found points of the right
  * @param num_part Number of partitions per side
  * @param b_view Bird View on or off
- * @param image_start Start point in pixel (y-axis)
+ * @param roi Start point of ROI in percent (y-axis)
  * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
  */
 int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points,
-          const int num_part, const bool b_view, const int image_start);
+          const int num_part, const bool b_view, const double roi);
 
 /**
  * Takes the histogram of the upper half of the image as a startig point for 

@@ -757,10 +757,10 @@ static inline void v_roi(Mat &img, const double start)
 //#############################################################################################
 
 int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part, const int num_lines,
-        const bool b_view, const int image_start)
+        const bool b_view, const double roi)
 {
     int coords_part[num_part + 1];
-    sub_partition(image_start, img.rows, num_part, true, coords_part);
+    sub_partition(roi*img.rows, img.rows, num_part, true, coords_part);
     std::vector<Vec2f> left_lines;
     std::vector<Vec2f> right_lines;
     int code = partitioned_hough(img, coords_part, num_part, num_lines, left_lines, right_lines, b_view);
@@ -780,10 +780,10 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
 }
 
 int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part,
-          const bool b_view, const int image_start)
+          const bool b_view, const double roi)
 {
     int coords_part[num_part + 1];
-    sub_partition(image_start, img.rows, num_part, true, coords_part);
+    sub_partition(roi*img.rows, img.rows, num_part, true, coords_part);
     std::vector<Vec2f> left_lines;
     std::vector<Vec2f> right_lines;
     int code = partitioned_hough(img, coords_part, num_part, 1, left_lines, right_lines, b_view);
@@ -815,6 +815,7 @@ int window_search(const Mat &img, const int window_width, const double roi, std:
 
     int input_points[2];
     h_histogram(img, roi, input_points);
+    std::cout << input_points[0] << ", " << input_points[1] << std::endl;
 
     left_points.clear();
     right_points.clear();
@@ -850,6 +851,20 @@ int window_search(const Mat &img, const int window_width, const double roi, std:
                 right_points[0] = Point2f(input_points[1] + c, (up + r));
         }
     }
+    #ifndef NDEBUG
+    std::cout << "multiple window search points found:" << std::endl;
+    for(auto p:left_points)
+    {
+        line(img, p, p, Scalar(255), 9);
+        std::cout << p << std::endl;
+    }
+    for (auto p : right_points){
+        line(img, p, p, Scalar(255), 9);
+        std::cout << p << std::endl;
+    }
+    show_image("window_s", img, true);
+    #endif
+
     for (int i = 0; i < 3; ++i)
     {
         assert(left_points[i] != check_point && right_points[i] != check_point);
