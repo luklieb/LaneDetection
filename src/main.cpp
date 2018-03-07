@@ -6,6 +6,7 @@
 #include "filters.hpp"
 #include "fitting.hpp"
 #include "helper.hpp"
+#include "calibration.hpp"
 
 using namespace cv;
 
@@ -20,6 +21,7 @@ using namespace cv;
  *
  * h: high, l: low
  */
+
 
 
 int main(int argc, char **argv)
@@ -39,8 +41,10 @@ int main(int argc, char **argv)
     String image_location = input_dir + input_file;
     Mat image;
     Mat clone;
+    Mat calibration; //used for b_view calibration
     image = imread(image_location, 1);
     clone = image.clone();
+    calibration = image.clone();
 
     if (!image.data)
     {
@@ -59,7 +63,7 @@ int main(int argc, char **argv)
     int NUM_LINES = 5; //2-5
     //Sliding Window Constants
     int W_NUM_WINDOWS = 10; //3-10
-    int W_WIDTH = 40;       //20, 40, 60, 80
+    int W_WIDTH = 60;       //20, 40, 60, 80
 
     //Birdview Constants
     bool B_VIEW = true;          //true, false
@@ -142,6 +146,8 @@ int main(int argc, char **argv)
     //**********************************************************
     //****************** Preliminary Setup *********************
     //**********************************************************
+
+    b_view_calibration(&calibration, B_OFFSET_MID, B_OFFSET, B_OFFSET2, B_HEIGHT);
 
     if (B_VIEW)
     {
