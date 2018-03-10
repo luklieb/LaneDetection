@@ -1,0 +1,11 @@
+algo 3
+num_part -1
+num_lines -1
+w_num_windows 5
+w_width 80
+b_view 1
+filter1 1
+filter2 1
+filter3 1
+filter4 1
+order 3
