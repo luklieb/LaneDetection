@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     String input_file = argv[2];
     String result_dir = modify_dir(argv[3]);
 #ifndef NDEBUG
-    std::cout << input_dir << ", " << result_dir << std::endl;
+    std::cout << "input_dir: " << input_dir << ", result_dir: " << result_dir << std::endl;
 #endif
     String image_location = input_dir + input_file;
     Mat image;
@@ -57,23 +57,24 @@ int main(int argc, char **argv)
     //#############################################################################################
 
     //1 = part. Hough, 2 = ALM, 3 = Sliding Window, 4 = Multiple Window
-    const int ALGO = 4;            //1,2,3,4
+    const int ALGO = 4;     //1,2,3,4
     //Amount of partitions and lines
-    int NUM_PART = 2;  //2-5
-    int NUM_LINES = 5; //2-5
+    int NUM_PART = 2;       //2-5, for algo 1,2
+    int NUM_LINES = 5;      //2-5, for algo 2
     //Sliding Window Constants
-    int W_NUM_WINDOWS = 10; //3-10
-    int W_WIDTH = 60;       //20, 40, 60, 80
+    int W_NUM_WINDOWS = 10; //3,5,7,9,11 for algo 3
+    int W_WIDTH = 60;       //20, 40, 60, 80, for algo 3,4
 
-    //Birdview Constants
+    //Birdview Constants; use b_view_calibration() to get "good" values for the 4 parameters
     bool B_VIEW = true;          //true, false
     double B_OFFSET_MID = 0.04;  //const
-    double B_OFFSET = 0.4;       //const
-    double B_OFFSET2 = 0.05;     //const
-    double B_HEIGHT = 0.56; //const
+    double B_OFFSET = 0.21;      //const
+    double B_OFFSET2 = 0.04;     //const
+    double B_HEIGHT = 0.52;      //const
     Mat b_mat;
     Mat b_inv_mat;
 
+    //manually set once according to used camera setup
     double ROI_START = 0.56; //const
     if(B_VIEW)
         ROI_START = 0.;
@@ -85,14 +86,14 @@ int main(int argc, char **argv)
     assert(FILTERS.size() >= 1);
 
     //Canny Parameter
-    int CA_THRES; //const
-    int KERNEL;       //const
+    int CA_THRES;   //const
+    int KERNEL;     //const
     //Sobel Thresholding Parameter
-    int S_MAG;
-    int S_PAR_X;
-    int S_PAR_Y;
+    int S_MAG;      //const
+    int S_PAR_X;    //const
+    int S_PAR_Y;    //const 
     //Color Thresholding Parameter
-    int C_THRES;
+    int C_THRES;    //const
 
     //parameters tuned by hand according to 4 different scenarios, 
     //which have the largest effect on filters
@@ -135,7 +136,7 @@ int main(int argc, char **argv)
 
 
     //Fitting Constants
-    int ORDER = 2; //const
+    int ORDER = 2; //2,3
     if(ALGO == 4)
         ORDER = 2;
 

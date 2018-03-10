@@ -1,0 +1,20 @@
+algo [1,2,3,4]
+num_part [2,3,4,5] for algo 1,2
+num_lines [2,3,4,5] for algo 2
+w_num_windows [3,5,7,9,11] for algo 3
+w_width [20,40,60,80] for algo 3,4
+b_view [true, false]
+filters1 [true, false]
+filters2 [true, false]
+filters3 [true, false]
+filters4 [true, false]
+order [2,3] for algo 1,2,3
+
+Combinations:
+algo 1: 4*2*(2^4-1)*2 = 240
+algo 2: 4*4*2*(2^4-1)*2 = 960
+algo 3: 5*4*2*(2^4-1)*2 = 1200
+algo 4: 4*2*(2^4-1) = 120
+total = 240+960+1200+120 = 2520
+w/ 10 images each => 25200
+1 sec each => 25200 sec / 3600 = 7 hours of evaluations
