@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 #  THE KITTI VISION BENCHMARK SUITE: ROAD BENCHMARK
 #
@@ -15,9 +15,20 @@
 #           Jannik Fritsch <jannik.fritsch@honda-ri.de>
 #
 
+
+# Input 1: Directory holding all images with detected lanes (from a previous run of the binary) e.g. /home/user/lane/eval/eval_images/tmp
+# Input 2: Directory holding the groundtruth directory e.g. /home/user/lane/eval/eval_images
+# Input 3: Path pointing to the (not yet existing) output file e.g. /home/user/lane/eval/eval_results/dataxxx
+# Images in the groundtruth and tmp directory need to have the same name
+# Outputs the following values to stdout
+# #MaxF AvgPrec PRE_wp REC_wp TPR_wp FPR_wp FNR_wp TP_wp FP_wp FN_wp TN_wp
+# Each line is one evaulated image
+# Last line is the average over all evaluted images
+
 import sys
 import os
 from glob import glob
+from pathlib import Path
 import shutil
 from helper import evalExp, pxEval_maximizeFMeasure, getGroundTruth
 import numpy as np
@@ -43,11 +54,12 @@ class dataStructure:
 #########################################################################
 
 
-def main(result_dir, train_dir, debug=False):
+def main(result_dir, train_dir, file_path = "./data1", debug=False):
     '''
     main method of evaluateRoad
-    :param result_dir: directory with the result propability maps, e.g., /home/elvis/kitti_road/my_results
-    :param gt_dir: training directory (has to contain groundtruth)  e.g., /home/elvis/kitti_road/training
+    :param result_dir: directory with the result propability maps, e.g., /home/user/lane/eval/eval_images/tmp
+    :param gt_dir: training directory (has to contain groundtruth)  e.g., /home/user/lane/eval/eval_images
+    :param file_path: path pointing to the (not yet existing) measurement file e.g. /home/user/lane/eval/eval_results/dataxxx
     :param debug: debug flag (OPTIONAL)
     '''
 
@@ -59,8 +71,7 @@ def main(result_dir, train_dir, debug=False):
     trainData_subdir_gt = 'groundtruth/'
     gt_dir = os.path.join(train_dir, trainData_subdir_gt)
 
-    assert os.path.isdir(
-        result_dir), 'Cannot find result_dir: %s ' % result_dir
+    assert os.path.isdir(result_dir), 'Cannot find result_dir: %s ' % result_dir
 
     # In the submission_dir we expect the probmaps!
     submission_dir = result_dir
@@ -71,16 +82,14 @@ def main(result_dir, train_dir, debug=False):
     eval_cats = []  # saves al categories at were evaluated
     outputline = []
 
-    print('#', end='')
-    for property in dataStructure.eval_propertyList:
-        print ('%s ' % (property), end='')
-    print()
+    path = Path(file_path)
+    with path.open(mode="w") as f:
+        f.write('#')
+        for property in dataStructure.eval_propertyList:
+            f.write('%s ' % (property))
+        f.write("\n")
 
     for cat in dataStructure.cats:
-        print()
-        print()
-        print()
-        print()
         print()
         if(debug):
             print ("Execute evaluation for category %s ..." % (cat))
@@ -145,9 +154,10 @@ def main(result_dir, train_dir, debug=False):
             prob_eval_scores.append(pxEval_maximizeFMeasure(
                 posNum, negNum, FN, FP, thresh=thresh))
             factor = 100
-            for property in dataStructure.eval_propertyList:
-                print('%4.2f ' % (prob_eval_scores[-1][property]*factor), end='')
-            print()
+            with path.open(mode="a") as f:
+                for property in dataStructure.eval_propertyList:
+                    f.write('%4.2f ' % (prob_eval_scores[-1][property]*factor))
+                f.write("\n")
 
             prob_eval_scores = []
 
@@ -166,9 +176,10 @@ def main(result_dir, train_dir, debug=False):
             eval_cats.append(cat)
 
             factor = 100
-            for property in dataStructure.eval_propertyList:
-                print('%4.2f ' % (prob_eval_scores[-1][property]*factor), end='')
-            print()
+            with path.open(mode="a") as f:
+                for property in dataStructure.eval_propertyList:
+                    f.write('%4.2f ' % (prob_eval_scores[-1][property]*factor))
+                f.write('\n')
 
             if(debug):
                 print("Finished evaluating category: %s " % (eval_cats[-1],))
@@ -190,15 +201,17 @@ def main(result_dir, train_dir, debug=False):
 if __name__ == "__main__":
 
     # check for correct number of arguments.
-    if len(sys.argv) != 3:
-        print("Usage: python evaluateRoad.py  <result_dir> <gt_dir>")
+    if len(sys.argv) != 4:
+        print("Usage: python evaluateRoad.py  <result_dir> <gt_dir> <eval_file_path>")
         print("<result_dir> = directory with the result propability maps, e.g., /home/elvis/kitti_road/my_results")
         print("<train_dir>  = training directory (has to contain groundtruth/)  e.g., /home/elvis/kitti_road/training")
+        print("<eval_file_path> = path to the output file")
         sys.exit(1)
 
     # parse parameters
     result_dir = sys.argv[1]
     gt_dir = sys.argv[2]
+    file_path = sys.argv[3]
 
     # Excecute main fun
-    main(result_dir, gt_dir)
+    main(result_dir, gt_dir, file_path, True)

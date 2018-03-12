@@ -26,17 +26,18 @@ using namespace cv;
 
 int main(int argc, char **argv)
 {
-    if (argc != 4)
+    if (argc != 5)
     {
-        printf("not right amount of args\n Call like this:\
-            ./mapra <input_directory_path> <input_file_name> <result_directory_path\n");
+        std::cout << "not right amount of args" << std::endl;
+        std::cout << "Call like this: ./mapra <input_directory_path> <input_file_name> <result_directory_path> <parameterFile_path>" << std::endl;
         return MAPRA_ERROR;
     }
     String input_dir = modify_dir(argv[1]);
     String input_file = argv[2];
     String result_dir = modify_dir(argv[3]);
+    String parameter_file = argv[4];
 #ifndef NDEBUG
-    std::cout << "input_dir: " << input_dir << ", result_dir: " << result_dir << std::endl;
+    std::cout << "input_dir: " << input_dir << ", result_dir: " << result_dir << ", paramter_file: " << parameter_file << std::endl;
 #endif
     String image_location = input_dir + input_file;
     Mat image;
@@ -48,7 +49,8 @@ int main(int argc, char **argv)
 
     if (!image.data)
     {
-        printf("No image data\n");
+        //printf("No image data\n");
+        std::cout << "no image data" << std::endl;
         return MAPRA_ERROR;
     }
 
@@ -56,6 +58,10 @@ int main(int argc, char **argv)
     //######################################### Parameter File ####################################
     //#############################################################################################
 
+    //TODO: create object of type parameter reader
+    //TODO: read in parameter_file
+    //TODO: assign values from parameter_file to variables
+    
     //1 = part. Hough, 2 = ALM, 3 = Sliding Window, 4 = Multiple Window
     const int ALGO = 4;     //1,2,3,4
     //Amount of partitions and lines
@@ -148,7 +154,8 @@ int main(int argc, char **argv)
     //****************** Preliminary Setup *********************
     //**********************************************************
 
-    b_view_calibration(&calibration, B_OFFSET_MID, B_OFFSET, B_OFFSET2, B_HEIGHT);
+    //Use once for calibration of the b_view parameters
+    //b_view_calibration(&calibration, B_OFFSET_MID, B_OFFSET, B_OFFSET2, B_HEIGHT);
 
     if (B_VIEW)
     {

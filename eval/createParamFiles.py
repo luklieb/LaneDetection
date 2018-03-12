@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 import os
 import shutil
@@ -25,8 +26,6 @@ filter4_range = [0, 1]
 order_range = [2, 3]
 
 suffix = 0
-
-
 
 def write_params(file, a=-1, np=-1, nl=-1, wnw=-1, ww=-1, bv=-1, f1=-1, f2=-1, f3=-1, f4=-1, o=-1):
     file.write("algo {}\n".format(a))
@@ -137,8 +136,9 @@ def createParameterFiles():
             print("Deleted all paramtere files in the directory.")
         else:
             print("Not deleting parameter files in the directory. Aborting now...")
-            sys.exit()
+            return
 
+    #create parameter files for each of the four algorithms
     createForAlgo1()
     createForAlgo2()
     createForAlgo3()
