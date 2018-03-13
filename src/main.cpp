@@ -40,6 +40,10 @@ int main(int argc, char **argv)
     std::cout << "input_dir: " << input_dir << ", result_dir: " << result_dir << ", paramter_file: " << parameter_file << std::endl;
 #endif
     String image_location = input_dir + input_file;
+    String png_number = input_file.substr(input_file.find("_")+1, input_file.find(".png")-input_file.find("_")-1);
+    String png_prefix = input_file.substr(0, input_file.find("_"));
+    //evaluation category is always "lane" and not "roade"
+    String output_file = png_prefix + "_lane_" + png_number + ".png";
     Mat image;
     Mat clone;
     Mat calibration; //used for b_view calibration
@@ -88,7 +92,7 @@ int main(int argc, char **argv)
     //Edge detection filters
     //1 = canny, 2 = sobel_mag, 3 = sobel_par, 4 = color_thres
     //1; 2; 3; 4; 1,2; 1,3; 1,4; 2,3; 2,4; 3,4; 1,2,3; 2,3,4; 1,3,4; 1,2,4; 1,2,3,4
-    std::vector<int> FILTERS = {1,2};
+    std::vector<int> FILTERS = {1};
     assert(FILTERS.size() >= 1);
 
     //Canny Parameter
@@ -241,14 +245,14 @@ int main(int argc, char **argv)
         draw_poly(clone, ROI_START, left_coeff, right_coeff, ORDER, b_inv_mat);
         show_image("normal", clone, true);
 #endif
-        code = store_result(image, ROI_START, left_coeff, right_coeff, ORDER, result_dir, input_file, b_inv_mat);
+        code = store_result(image, ROI_START, left_coeff, right_coeff, ORDER, result_dir, output_file, b_inv_mat);
         if (code != MAPRA_SUCCESS)
             return code;
     }
     //in normal-view
     else
     {
-        code = store_result(image, ROI_START, left_coeff, right_coeff, ORDER, result_dir, input_file);
+        code = store_result(image, ROI_START, left_coeff, right_coeff, ORDER, result_dir, output_file);
         if (code != MAPRA_SUCCESS)
             return code;
     }

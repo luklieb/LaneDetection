@@ -8,3 +8,4 @@ build/mapra
 *.pyc
 *.Python
 launch.json
+eval/eval_images/tmp/*
