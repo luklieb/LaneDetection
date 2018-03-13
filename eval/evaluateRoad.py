@@ -203,9 +203,9 @@ if __name__ == "__main__":
     # check for correct number of arguments.
     if len(sys.argv) != 4:
         print("Usage: python evaluateRoad.py  <result_dir> <gt_dir> <eval_file_path>")
-        print("<result_dir> = directory with the result propability maps, e.g., /home/elvis/kitti_road/my_results")
-        print("<train_dir>  = training directory (has to contain groundtruth/)  e.g., /home/elvis/kitti_road/training")
-        print("<eval_file_path> = path to the output file")
+        print("<result_dir> = directory with the result propability maps, e.g. /home/user/lane/eval/eval_images/tmp")
+        print("<train_dir>  = training directory (has to contain groundtruth/)  e.g. /home/user/lane/eval/eval_images")
+        print("<eval_file_path> = path to the output file e.g. / home/user/lane/eval/eval_results/dataxxxW)
         sys.exit(1)
 
     # parse parameters
