@@ -36,14 +36,22 @@ int main(int argc, char **argv)
     String input_file = argv[2];
     String result_dir = modify_dir(argv[3]);
     String parameter_file = argv[4];
+    //check if an actual parameterfile is given
+    if(parameter_file.find(".par") == String::npos)
+    {
+        std::cout << "wrong parameter file given" << std::endl;
+        return MAPRA_ERROR;
+    }
 #ifndef NDEBUG
     std::cout << "input_dir: " << input_dir << ", result_dir: " << result_dir << ", paramter_file: " << parameter_file << std::endl;
 #endif
     String image_location = input_dir + input_file;
+    //finds number part of input file name
     String png_number = input_file.substr(input_file.find("_")+1, input_file.find(".png")-input_file.find("_")-1);
+    //finds prefix part of input file name; used later for the right output file name
     String png_prefix = input_file.substr(0, input_file.find("_"));
-    //evaluation category is always "lane" and not "roade"
-    String output_file = png_prefix + "_lane_" + png_number + ".png";
+    //evaluation category is always "road" and not "lane"
+    String output_file = png_prefix + "_road_" + png_number + ".png";
     Mat image;
     Mat clone;
     Mat calibration; //used for b_view calibration
@@ -65,18 +73,23 @@ int main(int argc, char **argv)
     //TODO: create object of type parameter reader
     //TODO: read in parameter_file
     //TODO: assign values from parameter_file to variables
+
+    ParameterReader parameter;
+    parameter.read(parameter_file);
+
     
     //1 = part. Hough, 2 = ALM, 3 = Sliding Window, 4 = Multiple Window
-    const int ALGO = 4;     //1,2,3,4
+    const int ALGO = 2;     //1,2,3,4
     //Amount of partitions and lines
-    int NUM_PART = 2;       //2-5, for algo 1,2
-    int NUM_LINES = 5;      //2-5, for algo 2
+    const int NUM_PART = 3;       //2-5, for algo 1,2
+    const int NUM_LINES = 5;      //2-5, for algo 2
     //Sliding Window Constants
-    int W_NUM_WINDOWS = 10; //3,5,7,9,11 for algo 3
-    int W_WIDTH = 60;       //20, 40, 60, 80, for algo 3,4
+    const int W_NUM_WINDOWS = 10; //3,5,7,9,11 for algo 3
+    const int W_WIDTH = 60;       //20, 40, 60, 80, for algo 3,4
 
-    //Birdview Constants; use b_view_calibration() to get "good" values for the 4 parameters
-    bool B_VIEW = true;          //true, false
+    //Birdview Constants
+    //use b_view_calibration() once to get initial values for the 4 parameters for the current camera setup
+    bool B_VIEW = false;          //true, false
     double B_OFFSET_MID = 0.04;  //const
     double B_OFFSET = 0.21;      //const
     double B_OFFSET2 = 0.04;     //const
@@ -85,7 +98,7 @@ int main(int argc, char **argv)
     Mat b_inv_mat;
 
     //manually set once according to used camera setup
-    double ROI_START = 0.56; //const
+    double ROI_START = 0.52; //const
     if(B_VIEW)
         ROI_START = 0.;
 
@@ -127,8 +140,8 @@ int main(int argc, char **argv)
     }
     if (!B_VIEW && FILTERS.size() == 1)
     {
-        CA_THRES = 350;
-        KERNEL = 5;
+        CA_THRES = 100;
+        KERNEL = 3;
         S_MAG = 240;
         S_PAR_X = 200;
         S_PAR_Y = 100;
@@ -146,7 +159,7 @@ int main(int argc, char **argv)
 
 
     //Fitting Constants
-    int ORDER = 2; //2,3
+    int ORDER = 3; //2,3
     if(ALGO == 4)
         ORDER = 2;
 
@@ -159,6 +172,7 @@ int main(int argc, char **argv)
     //**********************************************************
 
     //Use once for calibration of the b_view parameters
+    //Comment out for actual lane detection
     //b_view_calibration(&calibration, B_OFFSET_MID, B_OFFSET, B_OFFSET2, B_HEIGHT);
 
     if (B_VIEW)

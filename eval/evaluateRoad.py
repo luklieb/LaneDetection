@@ -40,8 +40,7 @@ class dataStructure:
     All the defines go in here!
     '''
 
-    #cats = ['um_lane', 'um_road', 'umm_road']
-    cats = ['um_lane']
+    cats = ['um_road', 'umm_road']
     calib_end = '.txt'
     im_end = '.png'
     gt_end = '.png'
@@ -205,7 +204,7 @@ if __name__ == "__main__":
         print("Usage: python evaluateRoad.py  <result_dir> <gt_dir> <eval_file_path>")
         print("<result_dir> = directory with the result propability maps, e.g. /home/user/lane/eval/eval_images/tmp")
         print("<train_dir>  = training directory (has to contain groundtruth/)  e.g. /home/user/lane/eval/eval_images")
-        print("<eval_file_path> = path to the output file e.g. / home/user/lane/eval/eval_results/dataxxxW)
+        print("<eval_file_path> = path to the output file e.g. / home/user/lane/eval/eval_results/dataxxx")
         sys.exit(1)
 
     # parse parameters

@@ -22,8 +22,6 @@ void bird_view(const Mat &input_img, Mat &output_img, const double rel_height, c
 
 void canny_blur(Mat &image, const int thres, const int kernel)
 {
-    //original: low_threshold=50, kernel_size=3: smooth, but many left out edges
-    //birdview: 350, 5
     Mat proc;
     cvtColor(image, proc, COLOR_BGR2GRAY);
     blur(proc, proc, Size(3, 3));

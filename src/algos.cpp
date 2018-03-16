@@ -285,13 +285,16 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
 
     //Additional parameters, that can be changed, but make everything way more complicated
     //Automaticly tuning them is too much work for this scope
-    //Filters out relativley horizontal lines (only accepts "steep" angles between [0, angle_roi*pi] and [(1-angle_roi)*pi, pi])
-    const double angle_roi = 0.4;
-    //Similar to angle_roi, but now only for b_view == true
-    //Since the searched for lanes in the Birdview perspective are steeper, b_angle_roi < angle_roi
-    const double b_angle_roi = 0.1;
+    //Excludes relativley horizontal lines (only accepts "steep" angles between [0, excl_hor*pi] and [(1-excl_hor)*pi, pi])
+    const double excl_hor = 0.4;
+    //Excludes completely vertical lines from normal-view transformation
+    //Normal-View searches for angles in range [excl_vert*pi, excl_hor*pi] and [(1-excl_hor)*pi, (1-excl_vert)*pi]
+    double excl_vert = 0.03;
+    //Similar to excl_hor, but now only for b_view == true
+    //Since the searched for lanes in the Birdview perspective are steeper, b_excl_hor < excl_hor
+    const double b_excl_hor = 0.1;
     //Only needed if b_view == true. Relative width of one side to look for lines for the respective left or right lane.
-    //Left lane is searched in [0, b_roi_widht*width]; Right lanes is searched in [(1-b_roi_width)*width, widht].
+    //Left lane is searched in [0, b_roi_widht*width]; Right lanes is searched in [(1-b_roi_width)*width, width].
     const double b_roi_width = 0.55;
 
     int i, j;
@@ -344,6 +347,11 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
 
     //_accum_addtional used for b_view == true optimizations
     //b_view == false uses only _accum (yes, then we waste the space for _accum_additional...)
+    //In normal-view we can easily differentiate between left and right lane by their respective line angles,
+    //    because of the perspective distortion the lanes appear to meet on the horizon ->
+    //    Angle of left lane is ~[0, 0.5*PI] in parameter space; angle of right lane is ~[0.75*PI, PI]
+    //In bird-view it is hard to differentiate between left and right lane, because now the lanes should be more or less
+    //    parallel to each other -> split image in the middle and look for left/right lanes in the respective half
     AutoBuffer<int> _accum((numangle + 2) * (numrho + 2));
     AutoBuffer<int> _accum_additional((numangle + 2) * (numrho + 2));
     std::vector<int> _sort_buf_right;
@@ -367,7 +375,7 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
     // stage 1. fill accumulator
     if (b_view)
     {
-        //left side in accum
+        //left side of image for left lane in accum
         for (i = roi_start; i < roi_end; i++)
             for (j = 0; j < b_roi_width * width; j++)
             {
@@ -380,7 +388,7 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
                         accum[(n + 1) * (numrho + 2) + r + 1]++;
                     }
             }
-        //right side in accum_additional
+        //right side of image for right lane in accum_additional
         for (i = roi_start; i < roi_end; i++)
             for (j = (1. - b_roi_width) * width; j < width; j++)
             {
@@ -415,7 +423,7 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
     {
         for (int r = 0; r < numrho; r++)
         {
-            for (int n = 0; n < b_angle_roi * numangle; n++)
+            for (int n = 0; n < b_excl_hor * numangle; n++)
             {
                 int base = (n + 1) * (numrho + 2) + r + 1;
                 if (accum[base] > threshold &&
@@ -427,7 +435,7 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
                     accum_additional[base] > accum_additional[base - numrho - 2] && accum_additional[base] >= accum_additional[base + numrho + 2])
                     _sort_buf_right.push_back(base);
             }
-            for (int n = (1. - b_angle_roi) * numangle; n < numangle; n++)
+            for (int n = (1. - b_excl_hor) * numangle; n < numangle; n++)
             {
                 int base = (n + 1) * (numrho + 2) + r + 1;
                 if (accum[base] > threshold &&
@@ -443,12 +451,12 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
     }
     else //normal view
     {
-        //horizontal lines (~0.5*pi = 90°) are excluded
+        //more or less horizontal lines (~0.5*pi = 90°) are excluded
         //right leaning lines are added to _sort_buf_left
         //left leaning lines are added to _sort_buf_right
         for (int r = 0; r < numrho; r++)
         {
-            for (int n = 0; n < angle_roi * numangle; n++)
+            for (int n = excl_vert*numangle; n < excl_hor * numangle; n++)
             {
                 int base = (n + 1) * (numrho + 2) + r + 1;
                 if (accum[base] > threshold &&
@@ -456,7 +464,7 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
                     accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2])
                     _sort_buf_left.push_back(base);
             }
-            for (int n = (1. - angle_roi) * numangle; n < numangle; n++)
+            for (int n = (1. - excl_hor) * numangle; n < (1.-excl_vert)*numangle; n++)
             {
                 int base = (n + 1) * (numrho + 2) + r + 1;
                 if (accum[base] > threshold &&
@@ -779,25 +787,49 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
     return check_codes(code1, code2);
 }
 
-int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part,
+int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part,
           const bool b_view, const double roi)
 {
+    //Get coordinates of individual partitions
     int coords_part[num_part + 1];
     sub_partition(roi*img.rows, img.rows, num_part, true, coords_part);
     std::vector<Vec2f> left_lines;
     std::vector<Vec2f> right_lines;
+    //Conduct houghtransformations on the partitions
+    //Only 1 line per partition per side 
     int code = partitioned_hough(img, coords_part, num_part, 1, left_lines, right_lines, b_view);
 #ifndef NDEBUG
     std::cout << left_lines.size() << ", " << right_lines.size() << std::endl;
 #endif
     if (code != MAPRA_SUCCESS)
         return code;
+    //Transform line-coordinates from parameter space to coordinates space
+    //Get the intersection points of partition borders and lines
     code = get_points(left_lines, right_lines, 1, num_part, coords_part, left_points, right_points);
+    
     assert(left_points.size() == 2u * num_part && right_points.size() == 2u * num_part);
-
     if (left_points.size() != 2u * num_part || right_points.size() != 2u * num_part)
         return MAPRA_WARNING;
+
+#ifndef NDEBUG
+    for (auto p = left_points.begin(); p != left_points.end() ; p += 2)
+        line(img, *p, *(p+1), Scalar(255), 3);
+    for (auto p = right_points.begin(); p != right_points.end() ; p += 2)
+        line(img, *p, *(p+1), Scalar(255), 3);
+    show_image("houg_part", img, true);
+#endif
+
+    //Compute and return the mean of the two points for each side with same y-coordinate (on partition boundary) 
     pair_conversion(left_points, right_points);
+
+#ifndef NDEBUG
+    for (auto p = left_points.begin(); p != left_points.end(); p += 1)
+        line(img, *p, *(p), Scalar(255), 10);
+    for (auto p = right_points.begin(); p != right_points.end(); p += 1)
+        line(img, *p, *(p), Scalar(255), 10);
+    show_image("houg_part after conversion", img, true);
+#endif
+
     if (code != MAPRA_SUCCESS)
         return code;
     return MAPRA_SUCCESS;

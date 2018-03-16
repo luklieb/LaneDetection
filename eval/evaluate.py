@@ -79,12 +79,12 @@ if __name__ == '__main__':
     inputPngs = getPngs(inputDirName)
     #inputPngs = ["um_000000.png", "um_000001.png"]
     # get a list with all parameter file names
-    paramFiles = getParameterFiles(paramDirName)
-    #paramFiles = ["param_3333.par"]
+    #paramFiles = getParameterFiles(paramDirName)
+    paramFiles = ["param_3333.par"]
     for pf in paramFiles:
         suffix = getSuffix(pf)
         # get time before execution of lane detection algo in sec
-        t1 = time.process_time()
+        t1 = time.perf_counter()
         # call for all images the binary for one specific parameter file
         for png in inputPngs:
             exitCode = callBinary(png, pf)
@@ -92,12 +92,12 @@ if __name__ == '__main__':
         # => output images of binary now exist in directory tmpDirName
         # average time in millisec for one image
         # time measurement is coarse; it includes a lot of unnecessary fcts calls, writing and reading from disk and debug output
-        t2 = (time.process_time() - t1)/1000./len(inputPngs)
+        t2 = (time.perf_counter() - t1)/1000./len(inputPngs)
         storeTime(t2, os.path.abspath(os.path.join(resultsDirName, "time"+suffix)))
         # call fct main() evaluateRoad.py on each of output images in tmpDirName
         er.main(os.path.abspath(tmpDirName), os.path.abspath(imagesDirName), 
             os.path.abspath(os.path.join(resultsDirName, "data"+suffix)))
         # => one addtional measurement file "data123" in resultDirName
         # delete all images in tmpDirName
-        deleteImages(os.path.abspath(tmpDirName))
+        #deleteImages(os.path.abspath(tmpDirName))
         

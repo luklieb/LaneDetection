@@ -1,7 +1,5 @@
 #pragma once
 #include <opencv/cv.hpp>
-#include <opencv2/core/hal/intrin.hpp>
-#include <opencv2/core/cv_cpu_helper.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
 #include <numeric>
@@ -49,7 +47,7 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
  * @param roi Start point of ROI in percent (y-axis)
  * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
  */
-int hough(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points,
+int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points,
           const int num_part, const bool b_view, const double roi);
 
 /**
