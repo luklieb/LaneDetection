@@ -46,7 +46,7 @@ class dataStructure:
     gt_end = '.png'
     prob_end = '.png'
     eval_propertyList = ['MaxF', 'AvgPrec', 'PRE_wp', 'REC_wp',
-                         'TPR_wp', 'FPR_wp', 'FNR_wp', 'TP_wp', 'FP_wp', 'FN_wp', 'TN_wp']
+                         'TPR_wp', 'FPR_wp', 'FNR_wp']
 
 #########################################################################
 # function that does the evaluation
@@ -88,6 +88,11 @@ def main(result_dir, train_dir, file_path = "./data1", debug=False):
             f.write('%s ' % (property))
         f.write("\n")
 
+    totalFP = np.zeros(thresh.shape)
+    totalFN = np.zeros(thresh.shape)
+    totalPosNum = 0
+    totalNegNum = 0
+
     for cat in dataStructure.cats:
         print()
         if(debug):
@@ -97,10 +102,10 @@ def main(result_dir, train_dir, file_path = "./data1", debug=False):
         assert len(gt_fileList) > 0, 'Error reading ground truth'
         # Init data for categgory
         category_ok = True  # Flag for each cat
-        totalFP = np.zeros(thresh.shape)
-        totalFN = np.zeros(thresh.shape)
-        totalPosNum = 0
-        totalNegNum = 0
+        #totalFP = np.zeros(thresh.shape)
+        #totalFN = np.zeros(thresh.shape)
+        #totalPosNum = 0
+        #totalNegNum = 0
 
         firstFile = gt_fileList[0]
         file_key = firstFile.split('/')[-1].split('.')[0]
@@ -166,22 +171,22 @@ def main(result_dir, train_dir, file_path = "./data1", debug=False):
             totalPosNum += posNum
             totalNegNum += negNum
 
-        if category_ok:
-            if(debug):
-                print("Computing evaluation scores...")
-            # Compute eval scores!
-            prob_eval_scores.append(pxEval_maximizeFMeasure(
-                totalPosNum, totalNegNum, totalFN, totalFP, thresh=thresh))
-            eval_cats.append(cat)
+    if category_ok:
+        if(debug):
+            print("Computing evaluation scores...")
+        # Compute eval scores!
+        prob_eval_scores.append(pxEval_maximizeFMeasure(
+            totalPosNum, totalNegNum, totalFN, totalFP, thresh=thresh))
+        eval_cats.append(cat)
 
-            factor = 100
-            with path.open(mode="a") as f:
-                for property in dataStructure.eval_propertyList:
-                    f.write('%4.2f ' % (prob_eval_scores[-1][property]*factor))
-                f.write('\n')
+        factor = 100
+        with path.open(mode="a") as f:
+            for property in dataStructure.eval_propertyList:
+                f.write('%4.2f ' % (prob_eval_scores[-1][property]*factor))
+            f.write('\n')
 
-            if(debug):
-                print("Finished evaluating category: %s " % (eval_cats[-1],))
+        if(debug):
+            print("Finished evaluating category: %s " % (eval_cats[-1],))
 
     if len(eval_cats) > 0:
         if(debug):
