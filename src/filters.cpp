@@ -101,10 +101,10 @@ void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, 
 
     cvtColor(image, image, COLOR_BGR2GRAY);
     image = Scalar(255);
-    int i = 0;
     for (auto &f : fct_calls)
     {
 #ifndef NDEBUG
+        static int i = 0;
         show_image("multi_filter: "+std::to_string(i), image, true);
         show_image(std::to_string(i), f.second, true);
         ++i;

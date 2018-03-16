@@ -9,7 +9,7 @@
 
 using namespace cv;
 
-class ParameterReader {
+class Parameter_reader {
     private:
         std::map<std::string, std::string> data;
     public:
@@ -25,10 +25,10 @@ class ParameterReader {
  * @return Appropriatly typed value for the given key
  */
 template <typename T>
-T ParameterReader::get_value(const std::string &key) {
+T Parameter_reader::get_value(const std::string &key) {
     if (data.count(key) == 0) {
         std::cerr << "Key: " << key << ", does not exist." << std::endl;
-        return "-1";
+        exit(MAPRA_ERROR);
     } else {
         T param;
         std::istringstream ss(data.at(key));

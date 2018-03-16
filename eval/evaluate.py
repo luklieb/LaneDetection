@@ -42,6 +42,7 @@ def callBinary(image, parameterFile):
     proc.wait()
     exitcode = proc.returncode
     print(outputs[0].decode('ascii'))
+    print(outputs[1].decode('ascii'))
     if (exitcode == mapraWarning):
         print("algorithm could not detect a lane in file %s" %image)
     if (exitcode == mapraSuccess):

@@ -1,6 +1,6 @@
 #include "helper.hpp"
 
-void ParameterReader::read(const std::string &filename) {
+void Parameter_reader::read(const std::string &filename) {
     std::ifstream parameters(filename);
     std::string line;
     if (parameters.is_open()) {

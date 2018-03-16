@@ -100,7 +100,7 @@ def createForAlgo4():
         paramFileName = paramFileNameBase + str(suffix) + ".par"
         path = paramDir / Path(paramFileName)
         with path.open(mode="w") as f:
-            write_params(f, a=a, ww=ww, bv=bv, f1=f1, f2=f2, f3=f3, f4=f4)
+            write_params(f, a=a, ww=ww, bv=bv, f1=f1, f2=f2, f3=f3, f4=f4, o=2)
         suffix += 1
 
 

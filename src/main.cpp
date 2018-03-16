@@ -54,10 +54,12 @@ int main(int argc, char **argv)
     String output_file = png_prefix + "_road_" + png_number + ".png";
     Mat image;
     Mat clone;
-    Mat calibration; //used for b_view calibration
+    Mat calibration; //used for b_view_calibration()
     image = imread(image_location, 1);
+#ifndef NDEBUG
     clone = image.clone();
-    calibration = image.clone();
+#endif
+
 
     if (!image.data)
     {
@@ -70,43 +72,51 @@ int main(int argc, char **argv)
     //######################################### Parameter File ####################################
     //#############################################################################################
 
-    //TODO: create object of type parameter reader
-    //TODO: read in parameter_file
-    //TODO: assign values from parameter_file to variables
-
-    ParameterReader parameter;
+    //create a ParameterReader
+    Parameter_reader parameter;
     parameter.read(parameter_file);
 
     
     //1 = part. Hough, 2 = ALM, 3 = Sliding Window, 4 = Multiple Window
-    const int ALGO = 2;     //1,2,3,4
+    const int ALGO = parameter.get_value<int>("algo");     //1,2,3,4
     //Amount of partitions and lines
-    const int NUM_PART = 3;       //2-5, for algo 1,2
-    const int NUM_LINES = 5;      //2-5, for algo 2
+    const int NUM_PART = parameter.get_value<int>("num_part"); //2-5, for algo 1,2
+    const int NUM_LINES = parameter.get_value<int>("num_lines"); //2-5, for algo 2
     //Sliding Window Constants
-    const int W_NUM_WINDOWS = 10; //3,5,7,9,11 for algo 3
-    const int W_WIDTH = 60;       //20, 40, 60, 80, for algo 3,4
+    const int W_NUM_WINDOWS = parameter.get_value<int>("w_num_windows"); //3,5,7,9,11 for algo 3
+    const int W_WIDTH = parameter.get_value<int>("w_width");       //20, 40, 60, 80, for algo 3,4
 
     //Birdview Constants
-    //use b_view_calibration() once to get initial values for the 4 parameters for the current camera setup
-    bool B_VIEW = false;          //true, false
-    double B_OFFSET_MID = 0.04;  //const
-    double B_OFFSET = 0.21;      //const
-    double B_OFFSET2 = 0.04;     //const
-    double B_HEIGHT = 0.52;      //const
+    //use b_view_calibration() once to get initial values for the 4 parameters for the used camera setup
+    const bool B_VIEW = parameter.get_value<bool>("b_view"); //true, false
+    const double B_OFFSET_MID = 0.04;  //const
+    const double B_OFFSET = 0.21;      //const
+    const double B_OFFSET2 = 0.04;     //const
+    const double B_HEIGHT = 0.52;      //const
     Mat b_mat;
     Mat b_inv_mat;
 
     //manually set once according to used camera setup
-    double ROI_START = 0.52; //const
-    if(B_VIEW)
-        ROI_START = 0.;
+    const double ROI_START = B_VIEW ? 0. : 0.52;
 
     //Edge detection filters
     //1 = canny, 2 = sobel_mag, 3 = sobel_par, 4 = color_thres
     //1; 2; 3; 4; 1,2; 1,3; 1,4; 2,3; 2,4; 3,4; 1,2,3; 2,3,4; 1,3,4; 1,2,4; 1,2,3,4
-    std::vector<int> FILTERS = {1};
+    std::vector<int> FILTERS;
+    if (parameter.get_value<int>("filter1") == 1)
+        FILTERS.push_back(1);
+    if (parameter.get_value<int>("filter2") == 1)
+        FILTERS.push_back(2);
+    if (parameter.get_value<int>("filter3") == 1)
+        FILTERS.push_back(3);
+    if (parameter.get_value<int>("filter4") == 1)
+        FILTERS.push_back(4);
     assert(FILTERS.size() >= 1);
+    if(FILTERS.size() == 0u)
+    {
+        std::cout << "error in filter read in" << std::endl;
+        return MAPRA_ERROR;
+    }
 
     //Canny Parameter
     int CA_THRES;   //const
@@ -159,9 +169,9 @@ int main(int argc, char **argv)
 
 
     //Fitting Constants
-    int ORDER = 3; //2,3
-    if(ALGO == 4)
-        ORDER = 2;
+    int order = parameter.get_value<int>("order"); //2,3
+    const int ORDER = (order > NUM_PART && NUM_PART != -1) ? NUM_PART : order;
+    std::cout << "order: " << ORDER << std::endl;
 
     //#############################################################################################
     //######################################### Program ###########################################
@@ -173,6 +183,7 @@ int main(int argc, char **argv)
 
     //Use once for calibration of the b_view parameters
     //Comment out for actual lane detection
+    //calibration = image.clone(); //used for b_view_calibration()
     //b_view_calibration(&calibration, B_OFFSET_MID, B_OFFSET, B_OFFSET2, B_HEIGHT);
 
     if (B_VIEW)

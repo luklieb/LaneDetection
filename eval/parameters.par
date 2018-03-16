@@ -6,10 +6,10 @@ num_lines [2,3,4,5] for algo 2
 w_num_windows [3,5,7,9,11] for algo 3
 w_width [20,40,60,80] for algo 3,4
 b_view [true, false]
-filters1 [true, false]
-filters2 [true, false]
-filters3 [true, false]
-filters4 [true, false]
+filter1 [true, false]
+filter2 [true, false]
+filter3 [true, false]
+filter4 [true, false]
 order [2,3] for algo 1,2,3
 
 Combinations:
