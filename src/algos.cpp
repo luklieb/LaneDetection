@@ -456,7 +456,7 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
         //left leaning lines are added to _sort_buf_right
         for (int r = 0; r < numrho; r++)
         {
-            for (int n = excl_vert*numangle; n < excl_hor * numangle; n++)
+            for (int n = excl_vert * numangle; n < excl_hor * numangle; n++)
             {
                 int base = (n + 1) * (numrho + 2) + r + 1;
                 if (accum[base] > threshold &&
@@ -464,7 +464,7 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
                     accum[base] > accum[base - numrho - 2] && accum[base] >= accum[base + numrho + 2])
                     _sort_buf_left.push_back(base);
             }
-            for (int n = (1. - excl_hor) * numangle; n < (1.-excl_vert)*numangle; n++)
+            for (int n = (1. - excl_hor) * numangle; n < (1. - excl_vert) * numangle; n++)
             {
                 int base = (n + 1) * (numrho + 2) + r + 1;
                 if (accum[base] > threshold &&
@@ -768,7 +768,7 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
         const bool b_view, const double roi)
 {
     int coords_part[num_part + 1];
-    sub_partition(roi*img.rows, img.rows, num_part, true, coords_part);
+    sub_partition(roi * img.rows, img.rows, num_part, true, coords_part);
     std::vector<Vec2f> left_lines;
     std::vector<Vec2f> right_lines;
     int code = partitioned_hough(img, coords_part, num_part, num_lines, left_lines, right_lines, b_view);
@@ -792,11 +792,11 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
 {
     //Get coordinates of individual partitions
     int coords_part[num_part + 1];
-    sub_partition(roi*img.rows, img.rows, num_part, true, coords_part);
+    sub_partition(roi * img.rows, img.rows, num_part, true, coords_part);
     std::vector<Vec2f> left_lines;
     std::vector<Vec2f> right_lines;
     //Conduct houghtransformations on the partitions
-    //Only 1 line per partition per side 
+    //Only 1 line per partition per side
     int code = partitioned_hough(img, coords_part, num_part, 1, left_lines, right_lines, b_view);
 #ifndef NDEBUG
     std::cout << left_lines.size() << ", " << right_lines.size() << std::endl;
@@ -806,20 +806,20 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
     //Transform line-coordinates from parameter space to coordinates space
     //Get the intersection points of partition borders and lines
     code = get_points(left_lines, right_lines, 1, num_part, coords_part, left_points, right_points);
-    
+
     assert(left_points.size() == 2u * num_part && right_points.size() == 2u * num_part);
     if (left_points.size() != 2u * num_part || right_points.size() != 2u * num_part)
         return MAPRA_WARNING;
 
 #ifndef NDEBUG
-    for (auto p = left_points.begin(); p != left_points.end() ; p += 2)
-        line(img, *p, *(p+1), Scalar(255), 3);
-    for (auto p = right_points.begin(); p != right_points.end() ; p += 2)
-        line(img, *p, *(p+1), Scalar(255), 3);
+    for (auto p = left_points.begin(); p != left_points.end(); p += 2)
+        line(img, *p, *(p + 1), Scalar(255), 3);
+    for (auto p = right_points.begin(); p != right_points.end(); p += 2)
+        line(img, *p, *(p + 1), Scalar(255), 3);
     show_image("houg_part", img, true);
 #endif
 
-    //Compute and return the mean of the two points for each side with same y-coordinate (on partition boundary) 
+    //Compute and return the mean of the two points for each side with same y-coordinate (on partition boundary)
     pair_conversion(left_points, right_points);
 
 #ifndef NDEBUG
@@ -883,19 +883,20 @@ int window_search(const Mat &img, const int window_width, const double roi, std:
                 right_points[0] = Point2f(input_points[1] + c, (up + r));
         }
     }
-    #ifndef NDEBUG
+#ifndef NDEBUG
     std::cout << "multiple window search points found:" << std::endl;
-    for(auto p:left_points)
+    for (auto p : left_points)
     {
         line(img, p, p, Scalar(255), 9);
         std::cout << p << std::endl;
     }
-    for (auto p : right_points){
+    for (auto p : right_points)
+    {
         line(img, p, p, Scalar(255), 9);
         std::cout << p << std::endl;
     }
     show_image("window_s", img, true);
-    #endif
+#endif
 
     for (int i = 0; i < 3; ++i)
     {

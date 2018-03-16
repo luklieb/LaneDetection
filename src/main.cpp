@@ -197,7 +197,6 @@ int main(int argc, char **argv)
     //**********************************************************
 
     multi_filter(image, FILTERS, CA_THRES, KERNEL, S_MAG, S_PAR_X, S_PAR_Y, C_THRES);
-    show_image("after", image, true);
 
     //**********************************************************
     //******************* Algorithms ***************************

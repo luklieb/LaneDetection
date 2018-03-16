@@ -70,6 +70,43 @@ def storeTime(time, path):
 
 
 if __name__ == '__main__':
+    
+    #makes sure the directory structure is correct
+    if not (Path(resultsDirName).is_dir() and Path(gtDirName).is_dir() and Path(inputDirName).is_dir() and Path(tmpDirName).is_dir() and Path(paramDirName).is_dir()):
+        print("Error, your directory strcture is wrong! Aborting this script...")
+        print("You need the following structure:")
+        print("{} (empty) for the evaluation measurements files and parameter files".format(
+            resultsDirName))
+        print("{} (empty) for the parameter files generated with this script".format(
+            paramDirName))
+        print("{} holding all groundtruth images needed for the evaluation".format(
+            gtDirName))
+        print("{} holding all input images needed for the evaluation".format(
+            inputDirName))
+        print("{} (empty) for temporal storage of lane detected images of one parameter file".format(
+            tmpDirName))
+        sys.exit()
+
+    #makes sure we don't overwrite old result files
+    #asks if we want to delete result files and continue, or abort
+    if os.listdir(resultsDirName):
+        print("Error, your directory {} with the results files is not empty.".format(
+            resultsDirName))
+        print("Do you want to delete everything in this directory? [y/n]")
+        answer = input("> ")
+        if answer == "y":
+            #delete result files
+            for the_file in os.listdir(resultsDirName):
+                file_path = os.path.join(resultsDirName, the_file)
+                try:
+                    if os.path.isfile(file_path):
+                        os.unlink(file_path)
+                except Exception as e:
+                    print(e)
+            print("Deleted all result files in the directory.")
+        else:
+            print("Not deleting result files in the directory. Aborting now...")
+            sys.exit()
 
     # needs only to be called once, creates and stores ALL parameter files to paramDirName
     # can be commented out, if they already exist from an earlier run...
@@ -99,5 +136,5 @@ if __name__ == '__main__':
             os.path.abspath(os.path.join(resultsDirName, "data"+suffix)))
         # => one addtional measurement file "data123" in resultDirName
         # delete all images in tmpDirName
-        #deleteImages(os.path.abspath(tmpDirName))
+        deleteImages(os.path.abspath(tmpDirName))
         

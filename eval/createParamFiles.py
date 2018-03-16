@@ -106,18 +106,6 @@ def createForAlgo4():
 
 def createParameterFiles():
 
-    if not (resultsDir.is_dir() and gtDir.is_dir() and inputDir.is_dir() and tmpDir.is_dir() and paramDir.is_dir()):
-        print("Error, your directory strcture is wrong! Aborting this script...")
-        print("You need the following structure:")
-        print("{} (empty) for the evaluation measurements files and parameter files".format(
-            resultsDirName))
-        print("{} (empty) for the parameter files generated with this script".format(
-            paramDirName))
-        print("{} holding all groundtruth images needed for the evaluation".format(gtDirName))
-        print("{} holding all input images needed for the evaluation".format(inputDirName))
-        print("{} (empty) for temporal storage of lane detected images of one parameter file".format(tmpDirName))
-        sys.exit()
-
     #makes sure we don't overwrite old parameter files
     if os.listdir(paramDirName):
         print("Error, your directory {} with the parameter files is not empty.".format(
