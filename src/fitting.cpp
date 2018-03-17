@@ -150,6 +150,7 @@ int store_result(const Mat &image, const double &roi, const std::vector<double> 
         assert(points_l_trans.size() == points_r_trans.size());
         for (unsigned int i = 0; i < points_l_trans.size() - 1; i += 1)
         {
+            //draw to actual output image in pink
             //create polygons in order to fill gaps inbetween points on each side
             pts[0][0] = points_l_trans[i];
             pts[0][1] = points_l_trans[i + 1];
@@ -164,6 +165,7 @@ int store_result(const Mat &image, const double &roi, const std::vector<double> 
     {
         for (unsigned int i = 0; i < points_l.size(); ++i)
         {
+            //draw to actual output image in pink
             //just connect corresponding pixels on same row with each other
             line(result, points_l[i], points_r[i], Scalar(255, 0, 255));
         }
@@ -175,4 +177,10 @@ int store_result(const Mat &image, const double &roi, const std::vector<double> 
 
     imwrite(dir + file, result);
     return MAPRA_SUCCESS;
+}
+
+void store_void_result(const Mat &image, const String dir, const String file)
+{
+    Mat result(image.rows, image.cols, CV_8UC3, Scalar(0, 0, 255));
+    imwrite(dir + file, result);
 }

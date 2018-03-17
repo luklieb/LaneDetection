@@ -244,9 +244,11 @@ int main(int argc, char **argv)
         }
 
         code = hough(image, left_points, right_points, NUM_PART, B_VIEW, ROI_START);
+
         if (code != MAPRA_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
+            store_void_result(image, result_dir, output_file);
             return code;
         }
     }
@@ -258,13 +260,16 @@ int main(int argc, char **argv)
             !check_param(NUM_LINES, allowed_num_lines))
         {
             std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
+            store_void_result(image, result_dir, output_file);
             return MAPRA_ERROR;
         }
 
         code = alm(image, left_points, right_points, NUM_PART, NUM_LINES, B_VIEW, ROI_START);
+        
         if (code != MAPRA_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
+            store_void_result(image, result_dir, output_file);
             return code;
         }
     }
@@ -280,9 +285,11 @@ int main(int argc, char **argv)
         }
 
         code = sliding_windows_search(image, ROI_START, W_NUM_WINDOWS, W_WIDTH, left_points, right_points);
+        
         if (code != MAPRA_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
+            store_void_result(image, result_dir, output_file);
             return code;
         }
     }
@@ -296,9 +303,11 @@ int main(int argc, char **argv)
         }
 
         code = window_search(image, W_WIDTH, ROI_START, left_points, right_points);
+        
         if (code != MAPRA_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
+            store_void_result(image, result_dir, output_file);
             return code;
         }
     }

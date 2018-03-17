@@ -12,8 +12,8 @@ import time
 
 #different exit codes of binary
 mapraSuccess = 0
-mapraWarning = -1
-mapraError = 1
+mapraWarning = 1
+mapraError = 2
 
 
 
@@ -49,6 +49,7 @@ def callBinary(image, parameterFile):
         print("algorithm detected a lane in file %s" %image)
     if (exitcode == mapraError):
         print("algorithm 'crashed' in file %s" %image)
+        sys.exit()
     return exitcode
 
 # Deletes all the files in direcotry "path", but doesn't delete directory itself
@@ -118,8 +119,10 @@ if __name__ == '__main__':
     #inputPngs = ["um_000000.png", "um_000001.png"]
     # get a list with all parameter file names
     #paramFiles = getParameterFiles(paramDirName)
-    paramFiles = ["param_3333.par"]
+    paramFiles = ["param_3331.par", "param_3332.par",
+                  "param_3333.par", "param_3334.par"]
     for pf in paramFiles:
+        print("eval: current paramFile {}".format(pf))
         suffix = getSuffix(pf)
         # get time before execution of lane detection algo in sec
         t1 = time.perf_counter()

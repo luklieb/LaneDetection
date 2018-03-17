@@ -57,3 +57,12 @@ void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f
  */
 int store_result(const Mat &image, const double &roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff,
                  const int order, const String dir, const String file, const Mat &b_inv = Mat());
+
+/**
+ * If a MAPRA_WARNING is detected this function is called. It stores a plain red image to the specified location
+ * This way the evaluation realizes and takes into account, that no lanes/roads were detected
+ * @param image Used for correct output image sizes
+ * @param dir Path where the red image should be stored
+ * @param file File name of the resulting image
+ */
+void store_void_result(const Mat &image, const String dir, const String file);
