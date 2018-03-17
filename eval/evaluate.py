@@ -9,6 +9,7 @@ import re
 from pathlib import Path
 import sys
 import time
+from glob import glob
 
 #different exit codes of binary
 mapraSuccess = 0
@@ -18,10 +19,15 @@ mapraError = 2
 
 
 def getPngs(path):
-    return [f for f in os.listdir(path) if f.endswith(".png")]
+    # Unnecessary complicated, but the order of images files has to be the same
+    # as in evaluateRoad.py -> more complicated to match same sorted order
+    # first um* images then umm* images
+    paths = sorted(glob(os.path.join(path, "um_*.png")))
+    paths += sorted(glob(os.path.join(path, "umm_*.png")))
+    return [os.path.basename(f) for f in paths]
 
 def getParameterFiles(path):
-    return [f for f in os.listdir(path) if f.endswith(".par")]
+    return [f for f in sorted(os.listdir(path)) if f.endswith(".par")]
 
 # Matches numbers between a '_' and '.par' (i.e. "file_123.par" matches to and returns "123")
 def getSuffix(name):
@@ -29,6 +35,14 @@ def getSuffix(name):
         suffix = re.search(r"(?<=_)\d{1,4}(?=.par)", name).group(0)
     except:
         print("no suffix in getSuffix() found... Aborting")
+        sys.exit()
+    return suffix
+
+def getPngNumber(name):
+    try:
+        suffix = re.search(r"[1-9]{1,2}?(?=.png)", name).group(0)
+    except:
+        print("no number in getPngNumber() found... Aborting")
         sys.exit()
     return suffix
 
@@ -116,9 +130,8 @@ if __name__ == '__main__':
 
     # get a list with the names of all pngs used to detect lanes in
     inputPngs = getPngs(inputDirName)
-    #inputPngs = ["um_000000.png", "um_000001.png"]
     # get a list with all parameter file names
-    #paramFiles = getParameterFiles(paramDirName)
+    #print(getParameterFiles(paramDirName))
     paramFiles = ["param_3331.par", "param_3332.par",
                   "param_3333.par", "param_3334.par"]
     for pf in paramFiles:
@@ -129,6 +142,7 @@ if __name__ == '__main__':
         # call for all images the binary for one specific parameter file
         for png in inputPngs:
             exitCode = callBinary(png, pf)
+            number = getPngNumber(png)
             storeExitcodes(exitCode, os.path.abspath(os.path.join(resultsDirName, "exit"+suffix)))
         # => output images of binary now exist in directory tmpDirName
         # average time in millisec for one image
@@ -137,7 +151,7 @@ if __name__ == '__main__':
         storeTime(t2, os.path.abspath(os.path.join(resultsDirName, "time"+suffix)))
         # call fct main() evaluateRoad.py on each of output images in tmpDirName
         er.main(os.path.abspath(tmpDirName), os.path.abspath(imagesDirName), 
-            os.path.abspath(os.path.join(resultsDirName, "data"+suffix)))
+            os.path.abspath(os.path.join(resultsDirName, "data"+suffix)), False)
         # => one addtional measurement file "data123" in resultDirName
         # delete all images in tmpDirName
         deleteImages(os.path.abspath(tmpDirName))

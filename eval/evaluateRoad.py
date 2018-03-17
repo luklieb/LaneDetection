@@ -35,6 +35,7 @@ import numpy as np
 import cv2  # OpenCV
 
 
+
 class dataStructure:
     '''
     All the defines go in here!
@@ -98,7 +99,7 @@ def main(result_dir, train_dir, file_path = "./data1", debug=False):
         if(debug):
             print ("Execute evaluation for category %s ..." % (cat))
         fn_search = '%s*%s' % (cat, dataStructure.gt_end)
-        gt_fileList = glob(os.path.join(gt_dir, fn_search))
+        gt_fileList = sorted(glob(os.path.join(gt_dir, fn_search)))
         assert len(gt_fileList) > 0, 'Error reading ground truth'
         # Init data for categgory
         category_ok = True  # Flag for each cat
