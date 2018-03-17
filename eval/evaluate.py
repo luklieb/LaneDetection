@@ -55,14 +55,15 @@ def callBinary(image, parameterFile):
     outputs = proc.communicate()
     proc.wait()
     exitcode = proc.returncode
-    print(outputs[0].decode('ascii'))
-    print(outputs[1].decode('ascii'))
+    if (len(outputs[0]) > 0 or len(outputs[1] > 0)):
+        print(outputs[0].decode('ascii'))
+        print(outputs[1].decode('ascii'))
     if (exitcode == mapraWarning):
         print("algorithm could not detect a lane in file %s" %image)
     if (exitcode == mapraSuccess):
         print("algorithm detected a lane in file %s" %image)
     if (exitcode == mapraError):
-        print("algorithm 'crashed' in file %s" %image)
+        print("!!!!!!! algorithm 'crashed' in file %s !!!!!!!!!!" %image)
         sys.exit()
     return exitcode
 
@@ -135,19 +136,18 @@ if __name__ == '__main__':
     paramFiles = ["param_3331.par", "param_3332.par",
                   "param_3333.par", "param_3334.par"]
     for pf in paramFiles:
-        print("eval: current paramFile {}".format(pf))
+        print("#################### eval: current paramFile {} #######################".format(pf))
         suffix = getSuffix(pf)
         # get time before execution of lane detection algo in sec
         t1 = time.perf_counter()
         # call for all images the binary for one specific parameter file
         for png in inputPngs:
             exitCode = callBinary(png, pf)
-            number = getPngNumber(png)
             storeExitcodes(exitCode, os.path.abspath(os.path.join(resultsDirName, "exit"+suffix)))
         # => output images of binary now exist in directory tmpDirName
         # average time in millisec for one image
         # time measurement is coarse; it includes a lot of unnecessary fcts calls, writing and reading from disk and debug output
-        t2 = (time.perf_counter() - t1)/1000./len(inputPngs)
+        t2 = (time.perf_counter() - t1)*1000/len(inputPngs)
         storeTime(t2, os.path.abspath(os.path.join(resultsDirName, "time"+suffix)))
         # call fct main() evaluateRoad.py on each of output images in tmpDirName
         er.main(os.path.abspath(tmpDirName), os.path.abspath(imagesDirName), 
@@ -155,4 +155,3 @@ if __name__ == '__main__':
         # => one addtional measurement file "data123" in resultDirName
         # delete all images in tmpDirName
         deleteImages(os.path.abspath(tmpDirName))
-        

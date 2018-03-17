@@ -497,7 +497,9 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
         line.angle = static_cast<float>(min_theta) + n * theta;
         if (i > 0 && line.angle >= last_angle - range && line.angle <= last_angle + range)
         {
-            std::cout << "continue" << std::endl;
+#ifndef NDEBUG
+            std::cout << "hough continue" << std::endl;
+#endif
             ++j;
             continue; //current line is too similar (parallel) to previous line -> skip it
         }
@@ -518,7 +520,9 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
         line.angle = static_cast<float>(min_theta) + n * theta;
         if (i > 0 && line.angle >= last_angle - range && line.angle <= last_angle + range)
         {
-            std::cout << "continue" << std::endl;
+#ifndef NDEBUG
+            std::cout << "hough continue" << std::endl;
+#endif
             ++j;
             continue; //current line is too similar (parallel) to previous line -> skip it
         }
@@ -602,7 +606,9 @@ static int partitioned_hough(const Mat &img, const int *part_coords, const int n
             return code;
         left_lines.insert(left_lines.end(), left_lines_tmp.begin(), left_lines_tmp.end());
         right_lines.insert(right_lines.end(), right_lines_tmp.begin(), right_lines_tmp.end());
+#ifndef NDEBUG
         std::cout << "part left size: " << left_lines_tmp.size() << ", part right size: " << right_lines_tmp.size() << ", part-coords i+1: " << part_coords[i + 1] << std::endl;
+#endif
         assert(left_lines_tmp.size() == (unsigned int)num_lines && right_lines_tmp.size() == (unsigned int)num_lines);
         if (left_lines_tmp.size() != (unsigned int)num_lines || right_lines_tmp.size() != (unsigned int)num_lines)
             return MAPRA_WARNING;
@@ -861,8 +867,9 @@ int window_search(const Mat &img, const int window_width, const double roi, std:
 
     int input_points[2];
     h_histogram(img, roi, input_points);
-    std::cout << input_points[0] << ", " << input_points[1] << std::endl;
-
+#ifndef NDEBUG
+    std::cout << "input points: " << input_points[0] << ", " << input_points[1] << std::endl;
+#endif
     left_points.clear();
     right_points.clear();
     Point2f check_point(-1, -1);
