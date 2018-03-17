@@ -53,7 +53,6 @@ void color_thres(Mat &image, const int thres)
 
 void gabor(Mat &image)
 {
-    //TODO passende parameter finden
     int kernel_size = 40;
     double sigma = 1;         //frequency bandwidth
     double theta = 0.;        //angle of gabor kernel --> 0 for vertical lines

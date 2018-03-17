@@ -9,14 +9,17 @@
 
 using namespace cv;
 
-class Parameter_reader {
-    private:
-        std::map<std::string, std::string> data;
-    public:
-        // Read parameters from inputfile and save to data
-        void read(const std::string &filename);
-        // Get data of parameter of correct type for given key
-        template <typename T> T get_value(const std::string &key);
+class Parameter_reader
+{
+  private:
+    std::map<std::string, std::string> data;
+
+  public:
+    // Read parameters from inputfile and save to data
+    void read(const std::string &filename);
+    // Get data of parameter of correct type for given key
+    template <typename T>
+    T get_value(const std::string &key);
 };
 
 /**
@@ -25,11 +28,15 @@ class Parameter_reader {
  * @return Appropriatly typed value for the given key
  */
 template <typename T>
-T Parameter_reader::get_value(const std::string &key) {
-    if (data.count(key) == 0) {
+T Parameter_reader::get_value(const std::string &key)
+{
+    if (data.count(key) == 0)
+    {
         std::cerr << "Key: " << key << ", does not exist." << std::endl;
         exit(MAPRA_ERROR);
-    } else {
+    }
+    else
+    {
         T param;
         std::istringstream ss(data.at(key));
         ss >> param;
@@ -47,12 +54,12 @@ T Parameter_reader::get_value(const std::string &key) {
 template <typename T>
 std::string modify_dir(T old_dir)
 {
-    std::string dir (old_dir);
+    std::string dir(old_dir);
     if (dir.back() != '/')
-	{
-	    return dir + "/";
-	}
-    return dir; 
+    {
+        return dir + "/";
+    }
+    return dir;
 }
 
 /**
@@ -62,3 +69,42 @@ std::string modify_dir(T old_dir)
  * @param wait option to wait for a key input to close the window showing the image
  */
 void show_image(const String image_name, const Mat &image, const bool wait);
+
+/**
+ * Helper for printing std::vectors 
+ */
+template <typename T>
+std::ostream &operator<<(std::ostream &os, const std::vector<T> &v)
+{
+
+    os << "[";
+    for (auto v2 : v)
+        os << v2 << ", ";
+    os << "] ";
+    return os;
+}
+
+/**
+ * Checks if the parameter is within its range (allowed/possible values)
+ * @param parameter holds the value of the parameter which needs to be checked
+ * @param value_range holds all allowed/valid/possible values for the specified parameter
+ * @return returns true, if the parameter equals to any entry in value_range
+ */
+template <typename T>
+bool check_param(const T parameter, const std::vector<T> value_range)
+{
+    bool not_found = true;
+#ifndef NDEBUG
+    std::cout << "check_param(): " << std::endl;
+    std::cout << "parameter: " << parameter;
+#endif
+    for (auto v : value_range)
+    {
+#ifndef NDEBUG
+        std::cout << ", v: " << v;
+#endif
+        if (v == parameter)
+            not_found = false;
+    }
+    return !not_found;
+}

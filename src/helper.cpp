@@ -24,3 +24,4 @@ void show_image(const String image_name, const Mat &image, const bool wait)
     if (wait)
         waitKey(0);
 }
+

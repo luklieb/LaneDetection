@@ -625,7 +625,7 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
     std::cout << "histo done: " << upper_histo[0] << ", " << upper_histo[1] << std::endl;
 #endif
     //offsets from center points of window
-    const int height = input_img.rows / num_windows;
+    const int height = input_img.rows / num_windows - 1;
     const int y_offset = 0.5 * height + 1;
     const int x_offset = 0.5 * width;
     int x_tmp = 0;
@@ -644,20 +644,34 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
     }
 
     assert(x - x_offset >= 0);
+    if (x - x_offset < 0)
+        return MAPRA_WARNING;
     assert(x - x_offset + width < input_img.cols);
+    if (x - x_offset + width >= input_img.cols)
+        return MAPRA_WARNING;
     int y_tmp = 0;
     int y = input_img.rows - y_offset;
 
     for (int i = 0; i < num_windows; ++i)
     {
-//find all indizes of white (non black) pixels --> so we can compute the mean of them later
 #ifndef NDEBUG
         std::cout << "nonzero"
                   << " x: " << x - x_offset << ", y: " << y - y_offset << std::endl;
         std::cout << "image c: " << input_img.cols << ", r: " << input_img.rows
                   << ", width: " << width << ", height: " << height << std::endl;
 #endif
-        findNonZero(Mat(input_img, Rect(x - x_offset, y - y_offset, width, height)), non_zero);
+
+        try
+        {
+            //find all indizes of white (non black) pixels --> so we can compute the mean of them later
+            findNonZero(Mat(input_img, Rect(x - x_offset, y - y_offset, width, height)), non_zero);
+        }
+        catch (cv::Exception &e)
+        {
+            //if sliding windows move out of the picture
+            return MAPRA_WARNING;
+        }
+
 #ifndef NDEBUG
         std::cout << "nonzero done in sliding window: " << i << std::endl;
 #endif

@@ -22,14 +22,12 @@ using namespace cv;
  * h: high, l: low
  */
 
-
-
 int main(int argc, char **argv)
 {
     if (argc != 5)
     {
-        std::cout << "not right amount of args" << std::endl;
-        std::cout << "Call like this: ./mapra <input_directory_path> <input_file_name> <result_directory_path> <parameterFile_path>" << std::endl;
+        std::cerr << "not right amount of args" << std::endl;
+        std::cerr << "Call like this: ./mapra <input_directory_path> <input_file_name> <result_directory_path> <parameterFile_path>" << std::endl;
         return MAPRA_ERROR;
     }
     String input_dir = modify_dir(argv[1]);
@@ -37,9 +35,9 @@ int main(int argc, char **argv)
     String result_dir = modify_dir(argv[3]);
     String parameter_file = argv[4];
     //check if an actual parameterfile is given
-    if(parameter_file.find(".par") == String::npos)
+    if (parameter_file.find(".par") == String::npos)
     {
-        std::cout << "wrong parameter file given" << std::endl;
+        std::cerr << "wrong parameter file given" << std::endl;
         return MAPRA_ERROR;
     }
 #ifndef NDEBUG
@@ -47,7 +45,7 @@ int main(int argc, char **argv)
 #endif
     String image_location = input_dir + input_file;
     //finds number part of input file name
-    String png_number = input_file.substr(input_file.find("_")+1, input_file.find(".png")-input_file.find("_")-1);
+    String png_number = input_file.substr(input_file.find("_") + 1, input_file.find(".png") - input_file.find("_") - 1);
     //finds prefix part of input file name; used later for the right output file name
     String png_prefix = input_file.substr(0, input_file.find("_"));
     //evaluation category is always "road" and not "lane"
@@ -60,11 +58,10 @@ int main(int argc, char **argv)
     clone = image.clone();
 #endif
 
-
     if (!image.data)
     {
         //printf("No image data\n");
-        std::cout << "no image data" << std::endl;
+        std::cerr << "no image data" << std::endl;
         return MAPRA_ERROR;
     }
 
@@ -76,23 +73,28 @@ int main(int argc, char **argv)
     Parameter_reader parameter;
     parameter.read(parameter_file);
 
-    
     //1 = part. Hough, 2 = ALM, 3 = Sliding Window, 4 = Multiple Window
-    const int ALGO = parameter.get_value<int>("algo");     //1,2,3,4
+    const int ALGO = parameter.get_value<int>("algo"); //1,2,3,4
+    const std::vector<int> allowed_algo = {1, 2, 3, 4};
     //Amount of partitions and lines
     const int NUM_PART = parameter.get_value<int>("num_part"); //2-5, for algo 1,2
+    const std::vector<int> allowed_num_part = {2, 3, 4, 5};
     const int NUM_LINES = parameter.get_value<int>("num_lines"); //2-5, for algo 2
+    const std::vector<int> allowed_num_lines = {2, 3, 4, 5};
     //Sliding Window Constants
     const int W_NUM_WINDOWS = parameter.get_value<int>("w_num_windows"); //3,5,7,9,11 for algo 3
-    const int W_WIDTH = parameter.get_value<int>("w_width");       //20, 40, 60, 80, for algo 3,4
+    const std::vector<int> allowed_w_num_windows = {3, 5, 7, 9, 11};
+    const int W_WIDTH = parameter.get_value<int>("w_width"); //20, 40, 60, 80, for algo 3,4
+    const std::vector<int> allowed_w_width = {20, 40, 60, 80};
 
-    //Birdview Constants
+    //Birdview Constants manually set once
     //use b_view_calibration() once to get initial values for the 4 parameters for the used camera setup
     const bool B_VIEW = parameter.get_value<bool>("b_view"); //true, false
-    const double B_OFFSET_MID = 0.04;  //const
-    const double B_OFFSET = 0.21;      //const
-    const double B_OFFSET2 = 0.04;     //const
-    const double B_HEIGHT = 0.52;      //const
+    const std::vector<bool> allowed_b_view = {true, false};
+    const double B_OFFSET_MID = 0.04; //const
+    const double B_OFFSET = 0.21;     //const
+    const double B_OFFSET2 = 0.04;    //const
+    const double B_HEIGHT = 0.52;     //const
     Mat b_mat;
     Mat b_inv_mat;
 
@@ -102,6 +104,7 @@ int main(int argc, char **argv)
     //Edge detection filters
     //1 = canny, 2 = sobel_mag, 3 = sobel_par, 4 = color_thres
     //1; 2; 3; 4; 1,2; 1,3; 1,4; 2,3; 2,4; 3,4; 1,2,3; 2,3,4; 1,3,4; 1,2,4; 1,2,3,4
+    const std::vector<std::vector<int>> allowed_filters = {{1}, {2}, {3}, {4}, {1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4}, {1, 2, 3}, {2, 3, 4}, {1, 3, 4}, {1, 2, 4}, {1, 2, 3, 4}};
     std::vector<int> FILTERS;
     if (parameter.get_value<int>("filter1") == 1)
         FILTERS.push_back(1);
@@ -112,23 +115,23 @@ int main(int argc, char **argv)
     if (parameter.get_value<int>("filter4") == 1)
         FILTERS.push_back(4);
     assert(FILTERS.size() >= 1);
-    if(FILTERS.size() == 0u)
+    if (FILTERS.size() == 0u)
     {
-        std::cout << "error in filter read in" << std::endl;
+        std::cerr << "error in filter read in" << std::endl;
         return MAPRA_ERROR;
     }
 
     //Canny Parameter
-    int CA_THRES;   //const
-    int KERNEL;     //const
+    int CA_THRES; //const
+    int KERNEL;   //const
     //Sobel Thresholding Parameter
-    int S_MAG;      //const
-    int S_PAR_X;    //const
-    int S_PAR_Y;    //const 
+    int S_MAG;   //const
+    int S_PAR_X; //const
+    int S_PAR_Y; //const
     //Color Thresholding Parameter
-    int C_THRES;    //const
+    int C_THRES; //const
 
-    //parameters tuned by hand according to 4 different scenarios, 
+    //parameters tuned by hand according to 4 different scenarios,
     //which have the largest effect on filters
     if (!B_VIEW && FILTERS.size() > 1)
     {
@@ -167,11 +170,21 @@ int main(int argc, char **argv)
         C_THRES = 210;
     }
 
-
     //Fitting Constants
     int order = parameter.get_value<int>("order"); //2,3
     const int ORDER = (order > NUM_PART && NUM_PART != -1) ? NUM_PART : order;
-    std::cout << "order: " << ORDER << std::endl;
+    const std::vector<int> allowed_order = {2, 3};
+
+    //check if commenly used parameters are set correctly
+    //other parameters are tested further below at the respective algo
+    if (
+        !check_param(B_VIEW, allowed_b_view) ||
+        !check_param(FILTERS, allowed_filters) ||
+        !check_param(ORDER, allowed_order))
+    {
+        std::cerr << "wrong commen parameters in param_file: " << parameter_file << std::endl;
+        return MAPRA_ERROR;
+    }
 
     //#############################################################################################
     //######################################### Program ###########################################
@@ -182,14 +195,15 @@ int main(int argc, char **argv)
     //**********************************************************
 
     //Use once for calibration of the b_view parameters
-    //Comment out for actual lane detection
+    //Comment next two lines out for actual lane detection
     //calibration = image.clone(); //used for b_view_calibration()
     //b_view_calibration(&calibration, B_OFFSET_MID, B_OFFSET, B_OFFSET2, B_HEIGHT);
 
     if (B_VIEW)
     {
         //both trapezoids have to be adjusted according to the size of the input image and the ROI
-        //In the end both road lanes should be parallel in the Birds Eye View
+        //In the end, both road lanes should be parallel in the Birds Eye View
+        //Use b_view_calibration() once to get these constants
         const Point2f b_p1[4] = {Point2f((0.5 - B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows),
                                  Point2f((0.5 + B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows),
                                  Point2f((0.5 + B_OFFSET_MID + B_OFFSET) * image.cols, image.rows),
@@ -223,33 +237,75 @@ int main(int argc, char **argv)
     //Partitioned Hough
     if (ALGO == 1)
     {
+        if (!check_param(NUM_PART, allowed_num_part))
+        {
+            std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
+            return MAPRA_ERROR;
+        }
+
         code = hough(image, left_points, right_points, NUM_PART, B_VIEW, ROI_START);
         if (code != MAPRA_SUCCESS)
+        {
+            std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             return code;
+        }
     }
-
     //ALM
-    if (ALGO == 2)
+    else if (ALGO == 2)
     {
+        if (
+            !check_param(NUM_PART, allowed_num_part) ||
+            !check_param(NUM_LINES, allowed_num_lines))
+        {
+            std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
+            return MAPRA_ERROR;
+        }
+
         code = alm(image, left_points, right_points, NUM_PART, NUM_LINES, B_VIEW, ROI_START);
         if (code != MAPRA_SUCCESS)
+        {
+            std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             return code;
+        }
     }
-
     //Sliding Windows
-    if (ALGO == 3)
+    else if (ALGO == 3)
     {
+        if (
+            !check_param(W_NUM_WINDOWS, allowed_w_num_windows) ||
+            !check_param(W_WIDTH, allowed_w_width))
+        {
+            std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
+            return MAPRA_ERROR;
+        }
+
         code = sliding_windows_search(image, ROI_START, W_NUM_WINDOWS, W_WIDTH, left_points, right_points);
         if (code != MAPRA_SUCCESS)
+        {
+            std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             return code;
+        }
     }
-
     //Window search
-    if (ALGO == 4)
+    else if (ALGO == 4)
     {
+        if (!check_param(W_WIDTH, allowed_w_width))
+        {
+            std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
+            return MAPRA_ERROR;
+        }
+
         code = window_search(image, W_WIDTH, ROI_START, left_points, right_points);
         if (code != MAPRA_SUCCESS)
+        {
+            std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             return code;
+        }
+    }
+    else
+    {
+        std::cerr << "wrong Algo given" << std::endl;
+        return MAPRA_ERROR;
     }
 
     //**********************************************************

@@ -379,7 +379,6 @@ def modBev_plot(ax, rangeX = [-10, 10 ], rangeXpx= [0, 400], numDeltaX = 5, rang
 
     @param ax:
     '''
-    #TODO: Configureabiltiy would be nice!
     if fontSize==None:
         fontSize = 8
  

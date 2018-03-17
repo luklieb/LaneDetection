@@ -41,6 +41,7 @@ void canny_blur(Mat &image, const int thres, const int kernel);
 void color_thres(Mat &image, const int thres = 220);
 
 /**
+ * @note DEPRECATED, couldn't find any configurations for its arguments to make it work decently
  * Creates a Gabor kernel and applies it to the input image for edge detection
  * @param image being converted to an edge image
  * @note compare to canny_blur(Mat&)
