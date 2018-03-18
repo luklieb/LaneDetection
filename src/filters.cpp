@@ -115,7 +115,7 @@ void h_sobel(Mat &image)
     Sobel(image, image, -1, 1, 0);
 }
 
-void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, int s_mag, int s_par_x, int s_par_y, int c_thres)
+void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, int s_mag, int r_thres, int r_tau, int c_thres)
 {
     assert(*std::max_element(algos.begin(), algos.end()) <= 4 && *std::min_element(algos.begin(), algos.end()) >= 1);
     using namespace std::placeholders;
@@ -127,8 +127,10 @@ void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, 
     //fct_calls.push_back(std::make_pair(std::bind([](Mat &i) { sobel_dir_thres(i); }, _1), image.clone()));
     if (any_of(algos.begin(), algos.end(), [](int i) { return i == 2; }))
         fct_calls.push_back(std::make_pair(std::bind(sobel_mag_thres, _1, s_mag), image.clone()));
+    //if (any_of(algos.begin(), algos.end(), [](int i) { return i == 3; }))
+    //fct_calls.push_back(std::make_pair(std::bind(sobel_par_thres, _1, s_par_x, s_par_y), image.clone()));
     if (any_of(algos.begin(), algos.end(), [](int i) { return i == 3; }))
-        fct_calls.push_back(std::make_pair(std::bind(sobel_par_thres, _1, s_par_x, s_par_y), image.clone()));
+        fct_calls.push_back(std::make_pair(std::bind(row_filter, _1, r_thres, r_tau), image.clone()));
     if (any_of(algos.begin(), algos.end(), [](int i) { return i == 4; }))
         fct_calls.push_back(std::make_pair(std::bind(color_thres, _1, c_thres), image.clone()));
 
@@ -141,12 +143,30 @@ void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, 
     {
 #ifndef NDEBUG
         static int i = 0;
-        show_image("multi_filter: "+std::to_string(i), image, true);
+        show_image("multi_filter: " + std::to_string(i), image, true);
         show_image(std::to_string(i), f.second, true);
         ++i;
 #endif
         bitwise_and(image, f.second, image);
     }
+}
+
+void row_filter(Mat &image, const int thres, const int tau)
+{
+    cvtColor(image, image, COLOR_BGR2GRAY);
+    Mat cpy = image.clone();
+    uchar x_curr, x_m_t, x_p_t;
+    for (int y = 0; y < cpy.rows; ++y)
+    {
+        for (int x = 0; x < cpy.cols; ++x)
+        {
+            x_curr = cpy.at<uchar>(y, x);
+            x_m_t = x - tau < 0 ? 0 : cpy.at<uchar>(y, x - tau);
+            x_p_t = x + tau > cpy.cols ? cpy.cols : cpy.at<uchar>(y, x + tau);
+            image.at<uchar>(y, x) = saturate_cast<uchar>(2 * x_curr - (x_m_t + x_p_t) - abs(x_m_t - x_p_t));
+        }
+    }
+    threshold(image, image, thres, 255, THRESH_BINARY);
 }
 
 void sobel_dir_thres(Mat &image, const int thres_1, const int thres_2)

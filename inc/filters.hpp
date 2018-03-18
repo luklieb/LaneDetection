@@ -61,13 +61,21 @@ void h_sobel(Mat &image);
  * @param ca_thres Threshold for canny edge around (150-240)
  * @param kernel Kernel size (3,5,7)
  * @param s_mag Threshold for Sobel magnitude around (150-240)
- * @param s_par_x Threshold for Sobel derivative in x direction around (10-100)
- * @param s_par_y Threshold for Sobel derivative in y direction around (50-150)
+ * @param r_thres Threshold for the row_filter around (30-60)
+ * @param r_tau Thickness of lane in pixels for the row_filter around (2-10)
  * @param c_thres Threshold for L-channel of HLS color space around (180-240)
  * @note 1 = canny, 2 = sobel_mag_thres, 3 = sobel_par_thres, 4 = color_thres
  * @note each number should only exit max. once in vector algos
  */
-void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, int s_mag, int s_par_x, int s_par_y, int c_thres);
+void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, int s_mag, int r_thres, int r_tau, int c_thres);
+
+/**
+ * Filters along an image row
+ * @param image Input color image, Returns a binary (CV_8U) Mat with the detected edges in white
+ * @param thers Threshold for the binary image, after the image was filterd along its rows
+ * @param tau Specifices the thicknes of a road lane in pixels
+ */
+void row_filter(Mat &image, const int thres, const int tau);
 
 /**
  * @note DEPRECATED, because results were not good enough. No direct replacement

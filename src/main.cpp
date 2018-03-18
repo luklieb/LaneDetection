@@ -105,7 +105,7 @@ int main(int argc, char **argv)
     const double ROI_START = B_VIEW ? 0. : 0.52;
 
     //Edge detection filters
-    //1 = canny, 2 = sobel_mag, 3 = sobel_par, 4 = color_thres
+    //1 = canny, 2 = sobel_mag, 3 = row_filter, 4 = color_thres
     //1; 2; 3; 4; 1,2; 1,3; 1,4; 2,3; 2,4; 3,4; 1,2,3; 2,3,4; 1,3,4; 1,2,4; 1,2,3,4
     const std::vector<std::vector<int>> allowed_filters = {{1}, {2}, {3}, {4}, {1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4}, {1, 2, 3}, {2, 3, 4}, {1, 3, 4}, {1, 2, 4}, {1, 2, 3, 4}};
     std::vector<int> FILTERS;
@@ -129,8 +129,9 @@ int main(int argc, char **argv)
     int KERNEL;   //const
     //Sobel Thresholding Parameter
     int S_MAG;   //const
-    int S_PAR_X; //const
-    int S_PAR_Y; //const
+    //Row Filter Parameter
+    int R_THRES;
+    int R_TAU;
     //Color Thresholding Parameter
     int C_THRES; //const
 
@@ -141,8 +142,8 @@ int main(int argc, char **argv)
         CA_THRES = 40;
         KERNEL = 3;
         S_MAG = 90;
-        S_PAR_X = 200;
-        S_PAR_Y = 100;
+        R_THRES = 0;
+        R_TAU = 0;
         C_THRES = 150;
     }
     if (B_VIEW && FILTERS.size() > 1)
@@ -150,8 +151,8 @@ int main(int argc, char **argv)
         CA_THRES = 250;
         KERNEL = 5;
         S_MAG = 50;
-        S_PAR_X = 15;
-        S_PAR_Y = 150;
+        R_THRES = 0;
+        R_TAU = 0;
         C_THRES = 150;
     }
     if (!B_VIEW && FILTERS.size() == 1)
@@ -159,8 +160,8 @@ int main(int argc, char **argv)
         CA_THRES = 100;
         KERNEL = 3;
         S_MAG = 240;
-        S_PAR_X = 200;
-        S_PAR_Y = 100;
+        R_THRES = 0;
+        R_TAU = 0;
         C_THRES = 225;
     }
     if (B_VIEW && FILTERS.size() == 1)
@@ -168,8 +169,8 @@ int main(int argc, char **argv)
         CA_THRES = 350;
         KERNEL = 5;
         S_MAG = 125;
-        S_PAR_X = 10;
-        S_PAR_Y = 100;
+        R_THRES = 50;
+        R_TAU = 3;
         C_THRES = 210;
     }
 
@@ -227,7 +228,7 @@ int main(int argc, char **argv)
     //****************** Edge Detection ************************
     //**********************************************************
 
-    multi_filter(image, FILTERS, CA_THRES, KERNEL, S_MAG, S_PAR_X, S_PAR_Y, C_THRES);
+    multi_filter(image, FILTERS, CA_THRES, KERNEL, S_MAG, R_THRES, R_TAU, C_THRES);
 #ifndef NDEBUG
     show_image("after mulit filter", image, true);
 #endif
