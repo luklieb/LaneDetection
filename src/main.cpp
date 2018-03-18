@@ -75,7 +75,6 @@ int main(int argc, char **argv)
 
     //1 = part. Hough, 2 = ALM, 3 = Sliding Window, 4 = Multiple Window
     const int ALGO = parameter.get_value<int>("algo"); //1,2,3,4
-    const std::vector<int> allowed_algo = {1, 2, 3, 4};
     //Amount of partitions and lines
     const int NUM_PART = parameter.get_value<int>("num_part"); //2-5, for algo 1,2
     const std::vector<int> allowed_num_part = {2, 3, 4, 5};
@@ -86,6 +85,10 @@ int main(int argc, char **argv)
     const std::vector<int> allowed_w_num_windows = {3, 5, 7, 9, 11};
     const int W_WIDTH = parameter.get_value<int>("w_width"); //20, 40, 60, 80, for algo 3,4
     const std::vector<int> allowed_w_width = {20, 40, 60, 80};
+
+    //Random search constants
+    const int R_NUM_LINES = parameter.get_value<int>("r_num_lines");
+    const std::vector<int> allowed_r_num_lines = {10, 200, 400, 600, 800};
 
     //Birdview Constants manually set once
     //use b_view_calibration() once to get initial values for the 4 parameters for the used camera setup
@@ -304,6 +307,26 @@ int main(int argc, char **argv)
 
         code = window_search(image, W_WIDTH, ROI_START, left_points, right_points);
         
+        if (code != MAPRA_SUCCESS)
+        {
+            std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
+            store_void_result(image, result_dir, output_file);
+            return code;
+        }
+    }
+    //Random search
+    else if (ALGO ==5)
+    {
+        if (
+            !check_param(R_NUM_LINES, allowed_r_num_lines) ||
+            !check_param(NUM_PART, allowed_num_part))
+        {
+            std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
+            return MAPRA_ERROR;
+        }
+
+        code = random_search(image, R_NUM_LINES, ROI_START, NUM_PART, left_points, right_points);
+
         if (code != MAPRA_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;

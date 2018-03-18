@@ -5,6 +5,7 @@
 #include <numeric>
 #include <cmath>
 #include <string>
+#include <random>
 #include "codes.hpp"
 #include "helper.hpp"
 
@@ -50,10 +51,17 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
 int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points,
           const int num_part, const bool b_view, const double roi);
 
+
+/**
+ * Performs random line search 
+ * 
+ */
+int random_search(Mat &img, const int num_lines, const double roi, const int num_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+
 /**
  * Takes the histogram of the upper half of the image as a startig point for 
  * a sliding windows search along the road lanes (UDACITY Advance Lane course).
- * @param input_img Image to be searched for road lanes
+ * @param img Image to be searched for road lanes
  * @param roi Vertical starting point in percent of the region of interest (for the h_histrogram() call within)
  * @param num_windows The number of windows for both lanes (left and right)
  * @param width The width (in x-direction) of each windows
@@ -62,8 +70,8 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
  * @return Returns either MAPRA_SUCCESS, MAPRA_WARNING
  * @note Calls sliding_window_search(Mat &, const double, const int, const int, std::vector<Point2f> &, const bool) once for each side
  */
-int sliding_windows_search(Mat &input_img, const double roi, const int num_windows, const int width,
-                           std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+    int sliding_windows_search(Mat &img, const double roi, const int num_windows, const int width,
+                               std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
 
 /**
  * Given two input-window-starting-points (from a h_histogram), search those in three different places along the y-axis 

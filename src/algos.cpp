@@ -153,7 +153,10 @@ static int alm(std::vector<Point2f> &points, const int num_part, const int num_l
 
     assert(points.size() == 2u * num_part);
     if (points.size() != 2u * num_part)
+    {
+        std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
         return MAPRA_WARNING;
+    }
     return MAPRA_SUCCESS;
 }
 
@@ -177,7 +180,10 @@ static int get_points(const std::vector<Vec2f> &lines, const int num_lines, cons
 #endif
     assert(lines.size() == 1u * num_lines * num_part);
     if (lines.size() != 1u * num_lines * num_part)
+    {
+        std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
         return MAPRA_WARNING;
+    }
     points.clear();
     int i = 0;
     int j = 0;
@@ -205,7 +211,10 @@ static int get_points(const std::vector<Vec2f> &lines, const int num_lines, cons
     }
     assert(points.size() == 2u * num_part * num_lines);
     if (points.size() != 2u * num_part * num_lines)
+    {
+        std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
         return MAPRA_WARNING;
+    }
     return MAPRA_SUCCESS;
 }
 
@@ -253,7 +262,10 @@ static int h_histogram(const Mat &input_img, const double roi, int *x_points)
     }
     assert(x_points[0] != -1 && x_points[1] != -1 && x_points[0] <= x_points[1]);
     if (x_points[0] == -1 || x_points[1] == -1 || x_points[0] > x_points[1])
+    {
+        std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
         return MAPRA_WARNING;
+    }
     return MAPRA_SUCCESS;
 }
 
@@ -533,7 +545,10 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
     }
     assert(left_lines.size() == (unsigned int)lines_max && right_lines.size() == (unsigned int)lines_max);
     if (left_lines.size() != (unsigned int)lines_max || right_lines.size() != (unsigned int)lines_max)
+    {
+        std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
         return MAPRA_WARNING;
+    }
     return MAPRA_SUCCESS;
 }
 
@@ -561,6 +576,11 @@ static int pair_conversion(std::vector<Point2f> &points)
     for (int i = 1; i < size - 1; i += 2)
     {
         assert(cpy[i].y == cpy[i + 1].y);
+        if (cpy[i].y != cpy[i + 1].y)
+        {
+            std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
+            return MAPRA_WARNING;
+        }
         points.push_back(Point2f(0.5 * (cpy[i].x + cpy[i + 1].x), cpy[i].y));
     }
     //last point can stay
@@ -611,7 +631,10 @@ static int partitioned_hough(const Mat &img, const int *part_coords, const int n
 #endif
         assert(left_lines_tmp.size() == (unsigned int)num_lines && right_lines_tmp.size() == (unsigned int)num_lines);
         if (left_lines_tmp.size() != (unsigned int)num_lines || right_lines_tmp.size() != (unsigned int)num_lines)
+        {
+            std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
             return MAPRA_WARNING;
+        }
         left_lines_tmp.clear();
         right_lines_tmp.clear();
     }
@@ -651,10 +674,16 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
 
     assert(x - x_offset >= 0);
     if (x - x_offset < 0)
+    {
+        std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
         return MAPRA_WARNING;
+    }
     assert(x - x_offset + width < input_img.cols);
     if (x - x_offset + width >= input_img.cols)
+    {
+        std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
         return MAPRA_WARNING;
+    }
     int y_tmp = 0;
     int y = input_img.rows - y_offset;
 
@@ -675,6 +704,7 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
         catch (cv::Exception &e)
         {
             //if sliding windows move out of the picture
+            std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
             return MAPRA_WARNING;
         }
 
@@ -726,16 +756,25 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
         //if new search coordinates are not in the image, they are probably not part of a road lane
         assert(x + x_offset < input_img.cols);
         if (x + x_offset >= input_img.cols)
+        {
+            std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
             return MAPRA_WARNING;
+        }
         assert(x - x_offset >= 0);
         if (x - x_offset < 0)
+        {
+            std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
             return MAPRA_WARNING;
+        }
 
         non_zero.clear();
     }
     assert(points.size() == (unsigned int)num_windows);
     if (points.size() != (unsigned int)num_windows)
+    {
+        std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
         return MAPRA_WARNING;
+    }
     return MAPRA_SUCCESS;
 }
 
@@ -829,7 +868,10 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
 
     assert(left_points.size() == 2u * num_part && right_points.size() == 2u * num_part);
     if (left_points.size() != 2u * num_part || right_points.size() != 2u * num_part)
+    {
+        std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
         return MAPRA_WARNING;
+    }
 
 #ifndef NDEBUG
     for (auto p = left_points.begin(); p != left_points.end(); p += 2)
@@ -855,10 +897,134 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
     return MAPRA_SUCCESS;
 }
 
-int sliding_windows_search(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int random_search(Mat &img, const int num_lines, const double roi, const int num_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
-    int code1 = sliding_windows_search(input_img, roi, num_windows, width, left_points, true);
-    int code2 = sliding_windows_search(input_img, roi, num_windows, width, right_points, false);
+    //5% overlap for each half
+    const double image_split = 0.55;
+    //range to search around current line for white pixels
+    const unsigned int offset_x = 5;
+    //standard deviation for normal distribution
+    const double sigma = 70.;
+    //mean for left side distribution (closer to middle of picture)
+    const double m_l = 0.75 * img.cols * image_split;
+    //mean for right side distribution (closer to middle of picture)
+    const double m_r = img.cols - m_l - 1.;
+    std::default_random_engine generator;
+    std::normal_distribution<double> dist_left(m_l, sigma);
+    std::normal_distribution<double> dist_right(m_r, sigma);
+    //coordinates of partition borders
+    int coords_part[num_part + 1];
+    sub_partition(roi * img.rows, img.rows, num_part, true, coords_part);
+    //[start/end] [left/right] x values of points
+    int s_l, e_l, s_r, e_r;
+    //store temporarily the best x-[start/end]-[left/right]-points
+    int s_l_best = 0, e_l_best = 0, s_r_best = 0, e_r_best = 0;
+    //score of line quality (sum of white pixels along the current line)
+    int score_l = 0, score_r = 0;
+    //store temporarily the best score ->
+    int score_l_best = 0, score_r_best = 0;
+    //variables for line parameter calculation
+    double slope_l, slope_r;
+    double height_inv;
+    double height;
+    //x-coordinates of the current line
+    int x_l_curr, x_r_curr;
+
+    //for each partition
+    for (int part = 0; part < num_part; ++part)
+    {
+        //height of current partition
+        height = (coords_part[part + 1] - coords_part[part]);
+        height_inv = 1. / height;
+        assert(height_inv >= 0.);
+
+        //create num_lines on both sides and calculate for the current line the quality
+        //(-> move along the line an count white pixels)
+        //if current line for one side is better than the former best, temporarily store the configuration
+        for (int l = 0; l < num_lines; ++l)
+        {
+            s_l = dist_left(generator);
+            e_l = dist_left(generator);
+            s_r = dist_right(generator);
+            e_r = dist_right(generator);
+#ifndef NDEBUG
+            assert(s_l != s_r);
+            line(img, Point2f(s_l, coords_part[part]), Point2f(e_l, coords_part[part + 1]), Scalar(128));
+            line(img, Point2f(s_r, coords_part[part]), Point2f(e_r, coords_part[part + 1]), Scalar(128));
+#endif
+            slope_l = height_inv * (e_l - s_l);
+            slope_r = height_inv * (e_r - s_r);
+
+            //calc quality scores for both lines
+            for (int y = 0; y < height; ++y)
+            {
+                x_l_curr = y * slope_l + s_l;
+                x_r_curr = y * slope_r + s_r;
+
+                if (x_l_curr < 0 || x_l_curr > img.cols || x_r_curr < 0 || x_r_curr > img.cols)
+                {
+                    std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
+                    return MAPRA_WARNING;
+                }
+
+                //search for 2*offset_x pixels around the line for white pixels
+                //(only if pixel is in the image [0, img.cols])
+                for (int x_offset = -offset_x; x_offset <= (int)offset_x; ++x_offset)
+                {
+                    if (x_l_curr + x_offset > 0 && x_l_curr + x_offset < img.cols && img.at<uchar>(y + coords_part[part], x_l_curr + x_offset) >= 250)
+                        ++score_l;
+                    if (x_r_curr + x_offset > 0 && x_r_curr + x_offset < img.cols && img.at<uchar>(y + coords_part[part], x_r_curr + x_offset) >= 250)
+                        ++score_r;
+                }
+            }
+            //store current configuration for both sides
+            //if it is better than the all time best
+            if (score_l > score_l_best)
+            {
+                score_l_best = score_l;
+                s_l_best = s_l;
+                e_l_best = e_l;
+            }
+            if (score_r > score_r_best)
+            {
+                score_r_best = score_r;
+                s_r_best = s_r;
+                e_r_best = e_r;
+            }
+            score_l = 0;
+            score_r = 0;
+        }
+        left_points.push_back(Point2f(s_l_best, coords_part[part]));
+        left_points.push_back(Point2f(e_l_best, coords_part[part + 1]));
+        right_points.push_back(Point2f(s_r_best, coords_part[part]));
+        right_points.push_back(Point2f(e_r_best, coords_part[part + 1]));
+        score_l_best = 0;
+        score_r_best = 0;
+    }
+    if (left_points.size() != num_part * 2u || right_points.size() != num_part * 2u)
+    {
+        std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
+        return MAPRA_WARNING;
+    }
+    //Compute and return the mean of the two points for each side with same y-coordinate (on partition boundary)
+    pair_conversion(left_points, right_points);
+
+#ifndef NDEBUG
+    show_image("all random", img, true);
+    for (auto p = left_points.begin(); p != left_points.end(); p += 1)
+        line(img, *p, *(p + 1), Scalar(255), 4);
+    for (auto p = right_points.begin(); p != right_points.end(); p += 1)
+        line(img, *p, *(p + 1), Scalar(255), 4);
+    std::cout << "num points after random(): " << left_points.size() << ", right: " << right_points.size() << std::endl;
+    show_image("random finished", img, true);
+#endif
+    return MAPRA_SUCCESS;
+}
+
+int sliding_windows_search(Mat &img, const double roi, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+{
+    int code1 = sliding_windows_search(img, roi, num_windows, width, left_points, true);
+    int code2 = sliding_windows_search(img, roi, num_windows, width, right_points, false);
     return check_codes(code1, code2);
 }
 
@@ -923,7 +1089,10 @@ int window_search(const Mat &img, const int window_width, const double roi, std:
     {
         assert(left_points[i] != check_point && right_points[i] != check_point);
         if (left_points[i] == check_point || right_points[i] == check_point)
+        {
+            std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
             return MAPRA_WARNING;
+        }
     }
     return MAPRA_SUCCESS;
 }

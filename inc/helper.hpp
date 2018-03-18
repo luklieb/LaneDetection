@@ -106,5 +106,8 @@ bool check_param(const T parameter, const std::vector<T> value_range)
         if (v == parameter)
             not_found = false;
     }
+#ifndef NDEBUG
+    std::cout << std::endl;
+#endif
     return !not_found;
 }
