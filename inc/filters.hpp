@@ -61,8 +61,8 @@ void h_sobel(Mat &image);
  * @param ca_thres Threshold for canny edge around (150-240)
  * @param kernel Kernel size (3,5,7)
  * @param s_mag Threshold for Sobel magnitude around (150-240)
- * @param r_thres Threshold for the row_filter around (30-60)
- * @param r_tau Thickness of lane in pixels for the row_filter around (2-10)
+ * @param r_thres Threshold for the row_filter around (10-150)
+ * @param r_tau Thickness of lane in pixels for the row_filter around (2-20)
  * @param c_thres Threshold for L-channel of HLS color space around (180-240)
  * @note 1 = canny, 2 = sobel_mag_thres, 3 = sobel_par_thres, 4 = color_thres
  * @note each number should only exit max. once in vector algos
@@ -94,6 +94,7 @@ void sobel_dir_thres(Mat &image, const int thres_1 = 90, const int thres_2 = 180
 void sobel_mag_thres(Mat &image, const int thres = 50);
 
 /**
+ * @note DEPRECATED, because results not as good, replaced by row_filter()
  * Edge detection by Sobel partial derivative thresholding
  * @param image Input image for edge detection. Returns detected edges as a binary (one channel) image
  * @param thres_x Start threshold value for the derivatives in x direction

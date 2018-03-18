@@ -3,9 +3,10 @@ num_part -1
 num_lines -1
 w_num_windows -1
 w_width 60
+r_num_lines -1
 b_view 1
 filter1 1
 filter2 1
 filter3 0
 filter4 0
-order -1
+order 2

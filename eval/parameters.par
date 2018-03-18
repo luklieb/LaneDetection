@@ -18,7 +18,7 @@ algo 1: 4*2*(2^4-1)*2 = 240
 algo 2: 4*4*2*(2^4-1)*2 = 960
 algo 3: 5*4*2*(2^4-1)*2 = 1200
 algo 4: 4*2*(2^4-1) = 120
-algo 5: 4*4*2*(2^4-1) = 480
-total = 240+960+1200+120+480 = 3000
-w/ 10 images each => 30000
-1 sec each => 30000 sec / 3600 = 8 hours 20 minutes of evaluations
+algo 5: 4*4*2*(2^4-1)*2 = 960
+total = 240+960+1200+120+960 = 3480
+w/ 10 images each => 34800
+1 sec each => 34800 sec / 3600 = 9 hours 40 minutes of evaluations
