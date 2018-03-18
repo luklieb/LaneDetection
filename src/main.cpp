@@ -142,8 +142,8 @@ int main(int argc, char **argv)
         CA_THRES = 40;
         KERNEL = 3;
         S_MAG = 90;
-        R_THRES = 0;
-        R_TAU = 0;
+        R_THRES = 50;
+        R_TAU = 20;
         C_THRES = 150;
     }
     if (B_VIEW && FILTERS.size() > 1)
@@ -151,8 +151,8 @@ int main(int argc, char **argv)
         CA_THRES = 250;
         KERNEL = 5;
         S_MAG = 50;
-        R_THRES = 0;
-        R_TAU = 0;
+        R_THRES = 10;
+        R_TAU = 10;
         C_THRES = 150;
     }
     if (!B_VIEW && FILTERS.size() == 1)
@@ -160,8 +160,8 @@ int main(int argc, char **argv)
         CA_THRES = 100;
         KERNEL = 3;
         S_MAG = 240;
-        R_THRES = 0;
-        R_TAU = 0;
+        R_THRES = 75;
+        R_TAU = 20;
         C_THRES = 225;
     }
     if (B_VIEW && FILTERS.size() == 1)
@@ -170,7 +170,7 @@ int main(int argc, char **argv)
         KERNEL = 5;
         S_MAG = 125;
         R_THRES = 50;
-        R_TAU = 3;
+        R_TAU = 10;
         C_THRES = 210;
     }
 
