@@ -30,6 +30,43 @@ void canny_blur(Mat &image, const int thres, const int kernel)
 
 void color_thres(Mat &image, const int thres)
 {
+
+    //boost whites for lanes in shadows...
+    //not good enough...
+    /*
+    cvtColor(image,image, COLOR_BGR2HSV);
+    Mat v;
+    extractChannel(image,v,2);
+    std::cout << "type: " << v.type() << std::endl;
+    std::cout << "size: " << v.size() << std::endl;
+    int thres1 = 125;
+    for(int y = 0; y < v.rows; ++y)
+        for (int x = 0; x < v.cols; ++x)
+            if(v.at<uchar>(y,x) >= thres1)
+                v.at<uchar>(y,x) = 255;
+    insertChannel(v, image, 2);
+    cvtColor(image,image, COLOR_HSV2BGR);
+    show_image("hsv", image, true);
+    */
+    //boost contrast for lanes in shadows...
+    //not good enough
+    /*
+    double limit = 40.;
+    Size tile (100,100);
+
+    cvtColor(image, image, COLOR_BGR2Lab);
+    Mat l;
+    extractChannel(image, l, 0);
+    Ptr<CLAHE> c = createCLAHE(limit, tile);
+    Mat cl;
+    c->apply(l,cl);
+    std::cout << cl.type() << std::endl;
+    insertChannel(cl, image, 0);
+    cvtColor(image, image, COLOR_Lab2BGR);
+    //image.convertTo(image, -1, 1., -50.);
+    show_image("contrast", image, true);
+*/
+
     //convert to HLS color space
     cvtColor(image, image, COLOR_BGR2HLS);
     //binary (one channel) temporary Mat

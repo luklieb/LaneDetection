@@ -54,9 +54,16 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
 
 /**
  * Performs random line search 
- * 
+ * @param img Image to be searched for road lanes
+ * @param num_lines Number of random lines per partition per side used to detected lanes
+ * @param roi Region of interest
+ * @param num_part Number of partitions 
+ * @param b_view Indicator if we need to adjust some parameters, if bird-view is used (not used right now)
+ * @param left_points Vector returning detected points of left lane ready for fitting
+ * @param right_points Vector returning detected points of right lane ready for fitting
  */
-int random_search(Mat &img, const int num_lines, const double roi, const int num_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+int random_search(Mat &img, const int num_lines, const double roi, const int num_part, const bool b_view,
+        std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
 
 /**
  * Takes the histogram of the upper half of the image as a startig point for 

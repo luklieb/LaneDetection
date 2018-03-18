@@ -218,6 +218,9 @@ int main(int argc, char **argv)
         b_mat = getPerspectiveTransform(b_p1, b_p2);
         b_inv_mat = getPerspectiveTransform(b_p2, b_p1);
         warpPerspective(image, image, b_mat, Size(image.cols, image.rows));
+#ifndef NDEBUG
+        show_image("after bird view", image, true);
+#endif
     }
 
     //**********************************************************
@@ -225,6 +228,9 @@ int main(int argc, char **argv)
     //**********************************************************
 
     multi_filter(image, FILTERS, CA_THRES, KERNEL, S_MAG, S_PAR_X, S_PAR_Y, C_THRES);
+#ifndef NDEBUG
+    show_image("after mulit filter", image, true);
+#endif
 
     //**********************************************************
     //******************* Algorithms ***************************
@@ -268,7 +274,7 @@ int main(int argc, char **argv)
         }
 
         code = alm(image, left_points, right_points, NUM_PART, NUM_LINES, B_VIEW, ROI_START);
-        
+
         if (code != MAPRA_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
@@ -288,7 +294,7 @@ int main(int argc, char **argv)
         }
 
         code = sliding_windows_search(image, ROI_START, W_NUM_WINDOWS, W_WIDTH, left_points, right_points);
-        
+
         if (code != MAPRA_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
@@ -306,7 +312,7 @@ int main(int argc, char **argv)
         }
 
         code = window_search(image, W_WIDTH, ROI_START, left_points, right_points);
-        
+
         if (code != MAPRA_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
@@ -315,7 +321,7 @@ int main(int argc, char **argv)
         }
     }
     //Random search
-    else if (ALGO ==5)
+    else if (ALGO == 5)
     {
         if (
             !check_param(R_NUM_LINES, allowed_r_num_lines) ||
@@ -325,7 +331,7 @@ int main(int argc, char **argv)
             return MAPRA_ERROR;
         }
 
-        code = random_search(image, R_NUM_LINES, ROI_START, NUM_PART, left_points, right_points);
+        code = random_search(image, R_NUM_LINES, ROI_START, NUM_PART, B_VIEW, left_points, right_points);
 
         if (code != MAPRA_SUCCESS)
         {

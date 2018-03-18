@@ -897,18 +897,23 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
     return MAPRA_SUCCESS;
 }
 
-int random_search(Mat &img, const int num_lines, const double roi, const int num_part, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int random_search(Mat &img, const int num_lines, const double roi, const int num_part, const bool b_view, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
-    //5% overlap for each half
-    const double image_split = 0.55;
+    //0% overlap for each half
+    const double image_split = 0.5;
     //range to search around current line for white pixels
     const unsigned int offset_x = 5;
     //standard deviation for normal distribution
     const double sigma = 70.;
     //mean for left side distribution (closer to middle of picture)
-    const double m_l = 0.75 * img.cols * image_split;
+    const double m_l = 0.75 * img.cols * 0.55;
     //mean for right side distribution (closer to middle of picture)
     const double m_r = img.cols - m_l - 1.;
+    //maximum amount of pixels, that e_l-s_l respectively -(e_r-s_r) can differ
+    //this excludes lines with wrong slope
+    //-> most of left lines are right leaning, most of right lines are left leaning (same as road lanes)
+    const int pixel_diff = 50;
+
     std::default_random_engine generator;
     std::normal_distribution<double> dist_left(m_l, sigma);
     std::normal_distribution<double> dist_right(m_r, sigma);
@@ -941,14 +946,16 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
         //create num_lines on both sides and calculate for the current line the quality
         //(-> move along the line an count white pixels)
         //if current line for one side is better than the former best, temporarily store the configuration
-        for (int l = 0; l < num_lines; ++l)
+        for (int l = 0; l < num_lines;)
         {
             s_l = dist_left(generator);
             e_l = dist_left(generator);
             s_r = dist_right(generator);
             e_r = dist_right(generator);
+            if(e_l - s_l > pixel_diff || e_r -s_r < -pixel_diff)
+                continue;
+            ++l;
 #ifndef NDEBUG
-            assert(s_l != s_r);
             line(img, Point2f(s_l, coords_part[part]), Point2f(e_l, coords_part[part + 1]), Scalar(128));
             line(img, Point2f(s_r, coords_part[part]), Point2f(e_r, coords_part[part + 1]), Scalar(128));
 #endif
@@ -961,10 +968,11 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
                 x_l_curr = y * slope_l + s_l;
                 x_r_curr = y * slope_r + s_r;
 
-                if (x_l_curr < 0 || x_l_curr > img.cols || x_r_curr < 0 || x_r_curr > img.cols)
+                if (x_l_curr < 0 || x_l_curr > img.cols || x_r_curr < 0 || x_r_curr > img.cols || x_l_curr > image_split*img.cols || x_r_curr < (1.-image_split)*img.cols)
                 {
-                    std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-                    return MAPRA_WARNING;
+                    //normal distribution might give us points that are outside of the image
+                    //-> skip them
+                    continue;
                 }
 
                 //search for 2*offset_x pixels around the line for white pixels
@@ -1006,18 +1014,20 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
         std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
         return MAPRA_WARNING;
     }
-    //Compute and return the mean of the two points for each side with same y-coordinate (on partition boundary)
-    pair_conversion(left_points, right_points);
 
 #ifndef NDEBUG
     show_image("all random", img, true);
-    for (auto p = left_points.begin(); p != left_points.end(); p += 1)
+    for (auto p = left_points.begin(); p != left_points.end(); p += 2)
         line(img, *p, *(p + 1), Scalar(255), 4);
-    for (auto p = right_points.begin(); p != right_points.end(); p += 1)
+    for (auto p = right_points.begin(); p != right_points.end(); p += 2)
         line(img, *p, *(p + 1), Scalar(255), 4);
     std::cout << "num points after random(): " << left_points.size() << ", right: " << right_points.size() << std::endl;
     show_image("random finished", img, true);
 #endif
+
+    //Compute and return the mean of the two points for each side with same y-coordinate (on partition boundary)
+    pair_conversion(left_points, right_points);
+
     return MAPRA_SUCCESS;
 }
 
