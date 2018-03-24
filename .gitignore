@@ -9,3 +9,5 @@ build/mapra
 *.Python
 launch.json
 eval/eval_images/tmp/*
+*.bu
+*.cmake

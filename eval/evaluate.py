@@ -27,7 +27,9 @@ def getPngs(path):
     return [os.path.basename(f) for f in paths]
 
 def getParameterFiles(path):
-    return [f for f in sorted(os.listdir(path)) if f.endswith(".par")]
+    #return [f for f in sorted(os.listdir(path)) if f.endswith(".par")]
+    paths = sorted(glob(os.path.join(path, "param_[6,7,8,9]*.par")))
+    return [os.path.basename(f) for f in paths]
 
 # Matches numbers between a '_' and '.par' (i.e. "file_123.par" matches to and returns "123")
 def getSuffix(name):
@@ -55,7 +57,7 @@ def callBinary(image, parameterFile):
     outputs = proc.communicate()
     proc.wait()
     exitcode = proc.returncode
-    if (len(outputs[0]) > 0 or len(outputs[1] > 0)):
+    if (len(outputs[0]) > 0 or len(outputs[1]) > 0):
         print(outputs[0].decode('ascii'))
         print(outputs[1].decode('ascii'))
     if (exitcode == mapraWarning):
@@ -123,7 +125,7 @@ if __name__ == '__main__':
             print("Deleted all result files in the directory.")
         else:
             print("Not deleting result files in the directory. Aborting now...")
-            sys.exit()
+            #sys.exit()
 
     # needs only to be called once, creates and stores ALL parameter files to paramDirName
     # can be commented out, if they already exist from an earlier run...
@@ -132,9 +134,8 @@ if __name__ == '__main__':
     # get a list with the names of all pngs used to detect lanes in
     inputPngs = getPngs(inputDirName)
     # get a list with all parameter file names
-    #print(getParameterFiles(paramDirName))
-    paramFiles = ["param_3331.par", "param_3332.par",
-                  "param_3333.par", "param_3334.par"]
+    paramFiles = getParameterFiles(paramDirName)
+    #paramFiles = ["param_3331.par", "param_3332.par", "param_3333.par", "param_3334.par"]
     for pf in paramFiles:
         print("#################### eval: current paramFile {} #######################".format(pf))
         suffix = getSuffix(pf)
