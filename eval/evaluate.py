@@ -126,7 +126,7 @@ if __name__ == '__main__':
             print("Deleted all result files in the directory.")
         else:
             print("Not deleting result files in the directory. Aborting now...")
-            sys.exit()
+            #sys.exit()
 
     # needs only to be called once, creates and stores ALL parameter files to paramDirName
     # can be commented out, if they already exist from an earlier run...
@@ -140,6 +140,9 @@ if __name__ == '__main__':
     for pf in paramFiles:
         print("#################### eval: current paramFile {} #######################".format(pf))
         suffix = getSuffix(pf)
+        if(int(suffix) < 2520):
+            print("continue")
+            continue
         # get time before execution of lane detection algo in sec
         t1 = time.perf_counter()
         # call for all images the binary for one specific parameter file
