@@ -16,7 +16,7 @@ currentDir = Path.cwd
 
 num_part_range = [2, 3, 4, 5]
 num_lines_range = [2, 3, 4, 5]
-w_num_windows_range = [3, 5, 7, 9, 11]
+w_num_windows_range = [4, 5, 7, 9, 11]
 w_width_range = [20, 40, 60, 80]
 r_num_lines_range = [200, 400, 600, 800]
 b_view_range = [0, 1]

@@ -81,8 +81,8 @@ int main(int argc, char **argv)
     const int NUM_LINES = parameter.get_value<int>("num_lines"); //2-5, for algo 2
     const std::vector<int> allowed_num_lines = {2, 3, 4, 5};
     //Sliding Window Constants
-    const int W_NUM_WINDOWS = parameter.get_value<int>("w_num_windows"); //3,5,7,9,11 for algo 3
-    const std::vector<int> allowed_w_num_windows = {3, 5, 7, 9, 11};
+    const int W_NUM_WINDOWS = parameter.get_value<int>("w_num_windows"); //4,5,7,9,11 for algo 3
+    const std::vector<int> allowed_w_num_windows = {4, 5, 7, 9, 11};
     const int W_WIDTH = parameter.get_value<int>("w_width"); //20, 40, 60, 80, for algo 3,4
     const std::vector<int> allowed_w_width = {20, 40, 60, 80};
 

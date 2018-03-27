@@ -1,7 +1,7 @@
 algo 3
 num_part -1
 num_lines -1
-w_num_windows 3
+w_num_windows 4
 w_width 40
 r_num_lines -1
 b_view 0
