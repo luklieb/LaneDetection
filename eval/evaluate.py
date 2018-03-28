@@ -126,7 +126,7 @@ if __name__ == '__main__':
             print("Deleted all result files in the directory.")
         else:
             print("Not deleting result files in the directory. Aborting now...")
-            sys.exit()
+            #sys.exit()
 
     # needs only to be called once, creates and stores ALL parameter files to paramDirName
     # can be commented out, if they already exist from an earlier run...

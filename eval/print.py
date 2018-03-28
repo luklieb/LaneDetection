@@ -37,7 +37,7 @@ def getSuffix(prefix, name):
     return suffix
 
 
-def count (number, algosFinished):
+def count(number, algosFinished, ranges):
     if(ranges[0].count(number) > 0):
         algosFinished[0] += 1
     if(ranges[1].count(number) > 0):
@@ -49,32 +49,24 @@ def count (number, algosFinished):
     if(ranges[4].count(number) > 0):
         algosFinished[4] += 1
 
+def getNumFiles(ranges):
+    finished = [0, 0, 0, 0, 0]
+    timeFiles = getFiles("time", resultsDirName)
+    for t in timeFiles:
+        number = getSuffix("time", t)
+        count(int(number), finished, ranges)
+    print(finished)
 
-finished = [0, 0, 0, 0, 0]
+    finished = [0, 0, 0, 0, 0]
+    exitFiles = getFiles("exit", resultsDirName)
+    for t in exitFiles:
+        number = getSuffix("exit", t)
+        count(int(number), finished, ranges)
+    print(finished)
 
-timeFiles = getFiles("time", resultsDirName)
-for t in timeFiles:
-    number = getSuffix("time", t)
-    count(int(number), finished)
-
-print(finished)
-
-finished = [0, 0, 0, 0, 0]
-
-
-exitFiles = getFiles("exit", resultsDirName)
-for t in exitFiles:
-    number = getSuffix("exit", t)
-    count(int(number), finished)
-
-print(finished)
-
-finished = [0, 0, 0, 0, 0]
-
-
-resultFiles = getFiles("data", resultsDirName)
-for t in resultFiles:
-    number = getSuffix("data", t)
-    count(int(number), finished)
-
-print(finished)
+    finished = [0, 0, 0, 0, 0]
+    resultFiles = getFiles("data", resultsDirName)
+    for t in resultFiles:
+        number = getSuffix("data", t)
+        count(int(number), finished, ranges)
+    print(finished)
