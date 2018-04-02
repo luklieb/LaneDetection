@@ -52,7 +52,7 @@ def getPngNumber(name):
 # For each parameterFile this fct calls the binary for each image
 def callBinary(image, parameterFile):
     #../build/mapra eval_images/input *.png eval_images/tmp eval_param/*.par
-    args = shlex.split(os.path.abspath(os.path.join(buildPath, binary)) + " " + os.path.abspath(inputDirName) + " " + image + " " + os.path.abspath(tmpDirName) + " " + os.path.abspath(os.path.join(paramDirName,parameterFile)))
+    args = shlex.split(os.path.abspath(os.path.join(buildPath, binary)) + " " + os.path.abspath(inputDirName) + " " + image + " " + os.path.abspath(tmpDirName) + " " + os.path.abspath(os.path.join(paramDirName,parameterFile)) + " " + os.path.abspath(resultsDirName))
     proc = Popen(args, stdout=PIPE, stderr=PIPE)
     #stdout, stderr in tuple
     outputs = proc.communicate()
@@ -135,8 +135,8 @@ if __name__ == '__main__':
     # get a list with the names of all pngs used to detect lanes in
     inputPngs = getPngs(inputDirName)
     # get a list with all parameter file names
-    paramFiles = getParameterFiles(paramDirName)
-    #paramFiles = ["param_3331.par", "param_3332.par", "param_3333.par", "param_3334.par"]
+    #paramFiles = getParameterFiles(paramDirName)
+    paramFiles = ["param_5551.par", "param_5552.par", "param_5553.par", "param_5554.par", "param_5555.par"]
     for pf in paramFiles:
         print("#################### eval: current paramFile {} #######################".format(pf))
         suffix = getSuffix(pf)
@@ -150,10 +150,11 @@ if __name__ == '__main__':
         # average time in millisec for one image
         # time measurement is coarse; it includes a lot of unnecessary fcts calls, writing and reading from disk and debug output
         t2 = (time.perf_counter() - t1)*1000/len(inputPngs)
-        storeTime(t2, os.path.abspath(os.path.join(resultsDirName, "time"+suffix)))
+        print("time: ", t2)
+        #storeTime(t2, os.path.abspath(os.path.join(resultsDirName, "time"+suffix)))
         # call fct main() evaluateRoad.py on each of output images in tmpDirName
         er.main(os.path.abspath(tmpDirName), os.path.abspath(imagesDirName), 
             os.path.abspath(os.path.join(resultsDirName, "data"+suffix)), False)
         # => one addtional measurement file "data123" in resultDirName
         # delete all images in tmpDirName
-        deleteImages(os.path.abspath(tmpDirName))
+        #deleteImages(os.path.abspath(tmpDirName))

@@ -1,5 +1,7 @@
 #include <iostream>
 #include <functional>
+#include <chrono>
+#include <fstream>
 #include <opencv2/opencv.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "algos.hpp"
@@ -22,24 +24,48 @@ using namespace cv;
  * h: high, l: low
  */
 
+class Timer
+{
+  private:
+    typedef std::chrono::high_resolution_clock Clock_T;
+
+  public:
+    Timer() : start_(Clock_T::now()) {}
+
+    void reset() { start_ = Clock_T::now(); }
+
+    /// Returns the elapsed time in seconds since either the construction of the object or the last call to reset()
+    double elapsed() const
+    {
+        using namespace std::chrono;
+        return duration_cast<duration<double, seconds::period>>(Clock_T::now() - start_).count();
+    }
+
+  private:
+    Clock_T::time_point start_;
+};
+
 int main(int argc, char **argv)
 {
-    if (argc != 5)
+    if (argc != 6)
     {
         std::cerr << "not right amount of args" << std::endl;
-        std::cerr << "Call like this: ./mapra <input_directory_path> <input_file_name> <result_directory_path> <parameterFile_path>" << std::endl;
+        std::cerr << "Call like this: ./mapra <input_image_directory_path> <input_image_file_name> <result_directory_path> <parameter_file_path> <time_ouput_directory_path>" << std::endl;
+        std::cerr << "For Example:    ./mapra ../eval/eval_images/input/ um_000001.png ../eval/eval_images/tmp ../eval/eval_param/param_123.par ../eval/eval_results/" << std::endl;
         return MAPRA_ERROR;
     }
     String input_dir = modify_dir(argv[1]);
     String input_file = argv[2];
     String result_dir = modify_dir(argv[3]);
     String parameter_file = argv[4];
+    String time_dir = modify_dir(argv[5]);
     //check if an actual parameterfile is given
     if (parameter_file.find(".par") == String::npos)
     {
         std::cerr << "wrong parameter file given" << std::endl;
         return MAPRA_ERROR;
     }
+    String param_number = parameter_file.substr(parameter_file.find("param_") + 6, parameter_file.find(".par") - parameter_file.find("param_") - 6);
 #ifndef NDEBUG
     std::cout << "input_dir: " << input_dir << ", result_dir: " << result_dir << ", paramter_file: " << parameter_file << std::endl;
 #endif
@@ -128,7 +154,7 @@ int main(int argc, char **argv)
     int CA_THRES; //const
     int KERNEL;   //const
     //Sobel Thresholding Parameter
-    int S_MAG;   //const
+    int S_MAG; //const
     //Row Filter Parameter
     int R_THRES;
     int R_TAU;
@@ -202,6 +228,8 @@ int main(int argc, char **argv)
     //Comment next two lines out for actual lane detection
     //calibration = image.clone(); //used for b_view_calibration()
     //b_view_calibration(&calibration, B_OFFSET_MID, B_OFFSET, B_OFFSET2, B_HEIGHT);
+
+    Timer time_measurement;
 
     if (B_VIEW)
     {
@@ -355,6 +383,15 @@ int main(int argc, char **argv)
     std::vector<double> left_coeff;
 
     poly_reg(left_points, right_points, left_coeff, right_coeff, ORDER);
+
+    //stop time measurement
+    //append measured time to time file
+    double time_final = time_measurement.elapsed();
+    std::ofstream time_file;
+    time_file.open(time_dir + "time" + param_number, std::ios::app);
+    time_file << time_final << std::endl;
+    time_file.close();
+
 
     if (B_VIEW)
     {

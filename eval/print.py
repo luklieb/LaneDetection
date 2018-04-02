@@ -94,7 +94,7 @@ def getTimePerAlgo(ranges):
     return allTimes
 
 
-
+# Anteil Mapra Warnings
 
 
 getNumFiles(ranges)
