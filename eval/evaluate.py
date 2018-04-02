@@ -84,6 +84,7 @@ def storeExitcodes(exitcode, path):
     with Path(path).open(mode="a") as f:
         f.write(str(exitcode)+"\n")
 
+# Deprecated: Now measured in main.cpp directly
 def storeTime(time, path):
     with Path(path).open(mode="w") as f:
         f.write(str(time))
@@ -126,7 +127,7 @@ if __name__ == '__main__':
             print("Deleted all result files in the directory.")
         else:
             print("Not deleting result files in the directory. Aborting now...")
-            #sys.exit()
+            sys.exit()
 
     # needs only to be called once, creates and stores ALL parameter files to paramDirName
     # can be commented out, if they already exist from an earlier run...
@@ -135,8 +136,8 @@ if __name__ == '__main__':
     # get a list with the names of all pngs used to detect lanes in
     inputPngs = getPngs(inputDirName)
     # get a list with all parameter file names
-    #paramFiles = getParameterFiles(paramDirName)
-    paramFiles = ["param_5551.par", "param_5552.par", "param_5553.par", "param_5554.par", "param_5555.par"]
+    paramFiles = getParameterFiles(paramDirName)
+    #paramFiles = ["param_5551.par", "param_5552.par", "param_5553.par", "param_5554.par", "param_5555.par"]
     for pf in paramFiles:
         print("#################### eval: current paramFile {} #######################".format(pf))
         suffix = getSuffix(pf)
@@ -147,14 +148,9 @@ if __name__ == '__main__':
             exitCode = callBinary(png, pf)
             storeExitcodes(exitCode, os.path.abspath(os.path.join(resultsDirName, "exit"+suffix)))
         # => output images of binary now exist in directory tmpDirName
-        # average time in millisec for one image
-        # time measurement is coarse; it includes a lot of unnecessary fcts calls, writing and reading from disk and debug output
-        t2 = (time.perf_counter() - t1)*1000/len(inputPngs)
-        print("time: ", t2)
-        #storeTime(t2, os.path.abspath(os.path.join(resultsDirName, "time"+suffix)))
         # call fct main() evaluateRoad.py on each of output images in tmpDirName
         er.main(os.path.abspath(tmpDirName), os.path.abspath(imagesDirName), 
             os.path.abspath(os.path.join(resultsDirName, "data"+suffix)), False)
         # => one addtional measurement file "data123" in resultDirName
         # delete all images in tmpDirName
-        #deleteImages(os.path.abspath(tmpDirName))
+        deleteImages(os.path.abspath(tmpDirName))

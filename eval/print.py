@@ -79,14 +79,21 @@ def getNumFiles(ranges):
 def getTimePerAlgo(ranges):
     prefix = "time"
     allTimes = []
-    # Iter over ranges of each algorithm
+    # Iterate over ranges of each algorithm
     for algoRange in ranges:
         # Dictionary number:time
         times = {}
-        # Iter over a range of a specific algorithm
+        # Iterate over a range of a specific algorithm
         for curr in algoRange:
-            with open(os.path.join(resultsDirName, "time"+str(curr))) as f:
-                times[curr] = float(f.read())
+            with open(os.path.join(resultsDirName, prefix + str(curr))) as f:
+                sumTimes = 0.
+                count = 0
+                # Compute mean of times for each image
+                for line in f:
+                    sumTimes += float(line)
+                    count += 1
+                # Save mean time for parameter file curr
+                times[curr] = sumTimes/count
         minTKey = min(times, key=times.get)
         maxTKey = max(times, key=times.get)
         avgT = sum(times.values())/len(times)
@@ -98,6 +105,8 @@ def getTimePerAlgo(ranges):
 
 
 getNumFiles(ranges)
+ranges = [range(5551,5552), range(5552,5553), range(5553,5554), range(5554,5555), range(5555,5556)]
+print(ranges)
 times = getTimePerAlgo(ranges)
 print(times)
 
