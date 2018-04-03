@@ -28,9 +28,9 @@ def getPngs(path):
 
 # Only return the names (not whole path) of the parameter files ending in .par in the path
 def getParameterFiles(path):
-    return [f for f in sorted(os.listdir(path)) if f.endswith(".par")]
-    #paths = sorted(glob(os.path.join(path, "param_[6,7,8,9]*.par")))
-    #return [os.path.basename(f) for f in paths]
+    #return [f for f in sorted(os.listdir(path)) if f.endswith(".par")]
+    paths = sorted(glob(os.path.join(path, "param_[5,6,7,8,9]*.par")))
+    return [os.path.basename(f) for f in paths]
 
 # Matches numbers between a '_' and '.par' (i.e. "file_123.par" matches to and returns "123")
 def getSuffix(name):
@@ -127,7 +127,7 @@ if __name__ == '__main__':
             print("Deleted all result files in the directory.")
         else:
             print("Not deleting result files in the directory. Aborting now...")
-            sys.exit()
+            #sys.exit()
 
     # needs only to be called once, creates and stores ALL parameter files to paramDirName
     # can be commented out, if they already exist from an earlier run...
