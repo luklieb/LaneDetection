@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 from directoryStructure import *
+from evaluate import mapraError, mapraSuccess, mapraWarning
 import re
 from pathlib import Path
 from glob import glob
 import os
 import sys
+import pandas as pd
+import numpy as np
 
 
 # Number of combinations per algorithm
@@ -101,12 +104,67 @@ def getTimePerAlgo(ranges):
     return allTimes
 
 
-# Anteil Mapra Warnings
+# Success/Warning/Error return code ratios
+# Retruns list with 5 tuples (success ratio in %, warning ratio in %, error ration in %)
+def getRatioWarningsPerAlgo(ranges):
+    prefix = "exit"
+    codeRatios = []
+    for algoRange in ranges:
+        warnings = 0
+        errors = 0
+        successes = 0
+        for curr in algoRange:
+            with open(os.path.join(resultsDirName, prefix + str(curr))) as f:
+                for line in f:
+                    code = int(line)
+                    if code == mapraWarning:
+                        warnings += 1
+                    elif code == mapraError:
+                        errors += 1
+                    elif code == mapraSuccess:
+                        successes += 1
+                    else :
+                        print("wrong code in getRatioWarningsPerAlgo - aborting...")
+                        sys.exit()
+        codeSum = warnings+errors+successes
+        codeRatios.append((successes/codeSum*100., warnings/codeSum*100., errors/codeSum*100.))
+    return codeRatios
 
 
-getNumFiles(ranges)
-ranges = [range(5551,5552), range(5552,5553), range(5553,5554), range(5554,5555), range(5555,5556)]
-print(ranges)
-times = getTimePerAlgo(ranges)
-print(times)
+#getNumFiles(ranges)
+#ranges = [range(5551,5552), range(5552,5553), range(5553,5554), range(5554,5555), range(5555,5556)]
+#print(ranges)
+#times = getTimePerAlgo(ranges)
+#print(times)
+#ratios = getRatioWarningsPerAlgo(ranges)
+#print(ratios)
 
+#ranges = [range(1, 5)]
+
+# Computes the averages for each of the 7 figures for the 5 algorithms
+# Returns a nested list with 5 lists of averages figures [MaxF, AvgPrec, PRE, REC, TPR, FPR, FNR]
+def getAverageFiguresPerAlgo(ranges):
+    figures = []
+    for algoRange in ranges:
+        dictData = {}
+        for curr in algoRange:
+            singleData = pd.read_csv(os.path.join(resultsDirName, "data" + str(curr)), sep=" ", usecols=[0, 1,2,3,4,5,6], skiprows=[12])
+            dictData[curr] = singleData
+        multi = pd.concat(dictData)
+        mean = multi.groupby(level=[0]).mean().mean()
+        figures.append(mean.values.tolist())
+    return figures
+
+
+'''
+bla = pd.concat({"l1":l1, "l2":l2}, axis=0)
+print("hier l1: ", l1)
+print("hier l1[0]: ", l1["FNR_wp"][0])
+print(bla)
+mean = bla.groupby(level=[0]).mean()
+print(mean)
+mean=bla.groupby(level=[0]).mean().mean()
+print(mean)
+'''
+figure = getAverageFiguresPerAlgo(ranges)
+print(figure)
