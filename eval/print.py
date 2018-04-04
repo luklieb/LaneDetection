@@ -292,18 +292,17 @@ def main():
     print(algoComb)
     print(ranges)
 
-    #getNumFiles(ranges)
-    #ranges = [range(5551,5552), range(5552,5553), range(5553,5554), range(5554,5555), range(5555,5556)]
-    #print(ranges)
+    getNumFiles(ranges)
+    print(ranges)
     times = getTimePerAlgo(ranges)
     print(times)
     plotTimes(times)
-    #ratios = getRatioWarningsPerAlgo(ranges)
-    #plotRatios(ratios)
-    #print(ratios)
-
-    #ranges = [range(1, 5), range(7,10)]
-    #figure = getAverageFiguresPerAlgo(ranges)
+    ratios = getRatioWarningsPerAlgo(ranges)
+    plotRatios(ratios)
+    print(ratios)
+    
+    '''
+    ranges = [range(1, 5), range(7,10)]
     figure = [
         [58.9781401515152,  52.014102272727236, 73.70971590909093, 68.57000757575756,
             68.57000757575756, 29.164810606060602, 31.42999242424242],
@@ -315,15 +314,19 @@ def main():
             85.79489393939396, 64.24971969696968,  14.205106060606058],
         [69.26420265151516, 62.97054640151507, 93.23065909090893, 59.16701515151513, 
             59.16701515151513, 4.1527481060606055, 40.832983901515156]]
-    #plotAverageFigures(figure, "Average Figures For All Images")
+    '''
+    
+    figure = getAverageFiguresPerAlgo(ranges)
+    plotAverageFigures(figure, "Average Figures For All Images")
 
-    #figure = getAverageFiguresPerAlgoForImage(ranges, 6)
-    #plotAverageFigures(figure, "Average Figures For Image 6")
-    #fig, best, worst = getBestFiguresPerAlgo(ranges, 50)
-    #print(fig)
-    #print(best)
-    #print(worst)
-    #plotAverageFigures(fig, "best ones")
+    figure = getAverageFiguresPerAlgoForImage(ranges, 6)
+    plotAverageFigures(figure, "Average Figures For Image 6")
+    
+    n = 50
+    fig, best, worst = getBestFiguresPerAlgo(ranges, n)
+    print(best)
+    print(worst)
+    plotAverageFigures(fig, "Average Figures For {} Best Configurations".format(n))
 
 
 
