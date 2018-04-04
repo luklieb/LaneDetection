@@ -53,13 +53,13 @@ void poly_reg(const std::vector<Point2f> &left_points, const std::vector<Point2f
  * @param file File name of the resulting image
  * @param b_inv Inverse perspective transform matrix (in order to go from Bird-View to normal-view)
  *        if empty (=default argument), then store_result() will perform no perspective transformation
- * @return Returns either MAPRA_SUCCESS or MAPRA_ERROR
+ * @return Returns either LANEDET_SUCCESS or LANEDET_ERROR
  */
 int store_result(const Mat &image, const double &roi, const std::vector<double> &left_coeff, const std::vector<double> &right_coeff,
                  const int order, const String dir, const String file, const Mat &b_inv = Mat());
 
 /**
- * If a MAPRA_WARNING is detected this function is called. It stores a plain red image to the specified location
+ * If a LANEDET_WARNING is detected this function is called. It stores a plain red image to the specified location
  * This way the evaluation realizes and takes into account, that no lanes/roads were detected
  * @param image Used for correct output image sizes
  * @param dir Path where the red image should be stored

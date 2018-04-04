@@ -3,7 +3,7 @@ build/CMake*
 build/inc
 build/src
 build/Makefile
-build/mapra
+build/lanedet
 .vscode/
 *.pyc
 *.Python

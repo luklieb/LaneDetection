@@ -114,7 +114,7 @@ int store_result(const Mat &image, const double &roi, const std::vector<double> 
     //new red image
     assert(left_coeff.size() == right_coeff.size() && left_coeff.size() == 1u + order);
     if (left_coeff.size() != right_coeff.size() || right_coeff.size() != 1u + order)
-        return MAPRA_ERROR;
+        return LANEDET_ERROR;
 
     Mat result(image.rows, image.cols, CV_8UC3, Scalar(0, 0, 255));
     int start = 0, end = 0;
@@ -176,7 +176,7 @@ int store_result(const Mat &image, const double &roi, const std::vector<double> 
 #endif
 
     imwrite(dir + file, result);
-    return MAPRA_SUCCESS;
+    return LANEDET_SUCCESS;
 }
 
 void store_void_result(const Mat &image, const String dir, const String file)

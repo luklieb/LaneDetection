@@ -32,7 +32,7 @@ using namespace cv;
  * @param num_lines Number of lines per partition
  * @param b_view Bird View on or off
  * @param roi Start point of ROI in percent (y-axis)
- * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
+ * @return Returns either LANEDET_WARNING or LANEDET_SUCESS
  * @note calls alm(std::vector<Point2f> &, const int, const int) once for each side
  */
 int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, const int num_part,
@@ -46,7 +46,7 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
  * @param num_part Number of partitions per side
  * @param b_view Bird View on or off
  * @param roi Start point of ROI in percent (y-axis)
- * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
+ * @return Returns either LANEDET_WARNING or LANEDET_SUCESS
  */
 int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points,
           const int num_part, const bool b_view, const double roi);
@@ -74,11 +74,11 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
  * @param width The width (in x-direction) of each windows
  * @param left_points The returned points which were found in the window search on the left side 
  * @param right_points The returned points which were found in the window search on the right side 
- * @return Returns either MAPRA_SUCCESS, MAPRA_WARNING
+ * @return Returns either LANEDET_SUCCESS, LANEDET_WARNING
  * @note Calls sliding_window_search(Mat &, const double, const int, const int, std::vector<Point2f> &, const bool) once for each side
  */
-    int sliding_windows_search(Mat &img, const double roi, const int num_windows, const int width,
-                               std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+int sliding_windows_search(Mat &img, const double roi, const int num_windows, const int width,
+                           std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
 
 /**
  * Given two input-window-starting-points (from a h_histogram), search those in three different places along the y-axis 
@@ -89,7 +89,7 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
  * @param output_points returns the six points found in the image. If no suitable point is found (-1,-1) is returned
  * @note can be prallelized for the six independent regions -> early aborting as soon as a point is found
  * @note points are saved from top (high y values) to bottom (low y values) in [left/right]_points
- * @return Returns either MAPRA_SUCCESS, MAPRA_WARNING
+ * @return Returns either LANEDET_SUCCESS, LANEDET_WARNING
  */
-int window_search(const Mat &img, const int window_width, const double roi,
+int fixed_window_search(const Mat &img, const int window_width, const double roi,
                   std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);

@@ -11,13 +11,13 @@ Für die Evaluation in ```eval/``` muss eine OpenCV Version 2.4.13.5 und Python 
 cd build/
 cmake ..
 make
-./mapra <input_directory_path> <input_file_name> <result_directory_path> <parameterFile_path>
+./lanedet <input_directory_path> <input_file_name> <result_directory_path> <parameterFile_path>
 ```
 
 
 ## Projekt Struktur
 ```
-mapra
+lanedet
 ├── build
 │   ├── CMakeFiles
 │   ├── inc

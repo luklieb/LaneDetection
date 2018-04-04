@@ -1,6 +1,6 @@
 '''Binary'''
 #name of binary
-binary = "mapra"
+binary = "lanedet"
 #path of binary directory
 buildPath = "../build"
 

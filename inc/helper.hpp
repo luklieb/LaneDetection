@@ -33,7 +33,7 @@ T Parameter_reader::get_value(const std::string &key)
     if (data.count(key) == 0)
     {
         std::cerr << "Key: " << key << ", does not exist." << std::endl;
-        exit(MAPRA_ERROR);
+        exit(LANEDET_ERROR);
     }
     else
     {

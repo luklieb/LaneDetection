@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 from directoryStructure import *
-from evaluate import mapraError, mapraSuccess, mapraWarning
+from evaluate import lanedetError, lanedetSuccess, lanedetWarning
 import re
 from pathlib import Path
 from glob import glob
@@ -128,11 +128,11 @@ def getRatioExitCodesPerAlgo(ranges):
                 # Increment counter for respective exit code
                 for line in f:
                     code = int(line)
-                    if code == mapraWarning:
+                    if code == lanedetWarning:
                         warnings += 1
-                    elif code == mapraError:
+                    elif code == lanedetError:
                         errors += 1
-                    elif code == mapraSuccess:
+                    elif code == lanedetSuccess:
                         successes += 1
                     else :
                         print("wrong code in getRatioWarningsPerAlgo - aborting...")

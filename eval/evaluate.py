@@ -13,9 +13,9 @@ from glob import glob
 
 # Different exit codes of binary
 # Check also file codes.hpp
-mapraSuccess = 0
-mapraWarning = 1
-mapraError = 2
+lanedetSuccess = 0
+lanedetWarning = 1
+lanedetError = 2
 
 
 def getPngs(path):
@@ -56,7 +56,7 @@ def getPngNumber(name):
 
 
 def callBinary(image, parameterFile):
-    # Calls ../build/mapra eval_images/input *.png eval_images/tmp eval_param/param_xxx.par eval_results/
+    # Calls ../build/lanedet eval_images/input *.png eval_images/tmp eval_param/param_xxx.par eval_results/
     args = shlex.split(os.path.abspath(os.path.join(buildPath, binary)) + " " + os.path.abspath(inputDirName) + " " + image + " " +
                        os.path.abspath(tmpDirName) + " " + os.path.abspath(os.path.join(paramDirName, parameterFile)) + " " + os.path.abspath(resultsDirName))
     proc = Popen(args, stdout=PIPE, stderr=PIPE)
@@ -67,11 +67,11 @@ def callBinary(image, parameterFile):
     if (len(outputs[0]) > 0 or len(outputs[1]) > 0):
         print(outputs[0].decode('ascii'))
         print(outputs[1].decode('ascii'))
-    if (exitcode == mapraWarning):
+    if (exitcode == lanedetWarning):
         print("algorithm could not detect a lane in file %s" % image)
-    if (exitcode == mapraSuccess):
+    if (exitcode == lanedetSuccess):
         print("algorithm detected a lane in file %s" % image)
-    if (exitcode == mapraError):
+    if (exitcode == lanedetError):
         print("!!!!!!! algorithm 'crashed' in file %s !!!!!!!!!!" % image)
         sys.exit()
     return exitcode

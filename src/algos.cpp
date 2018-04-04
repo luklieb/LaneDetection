@@ -63,11 +63,11 @@ static inline double norm(const Point2f &p1, const Point2f &p2)
  */
 static int inline check_codes(int code1, int code2)
 {
-    if (code1 == MAPRA_ERROR || code2 == MAPRA_ERROR)
-        return MAPRA_ERROR;
-    if (code1 == MAPRA_WARNING || code2 == MAPRA_WARNING)
-        return MAPRA_WARNING;
-    return MAPRA_SUCCESS;
+    if (code1 == LANEDET_ERROR || code2 == LANEDET_ERROR)
+        return LANEDET_ERROR;
+    if (code1 == LANEDET_WARNING || code2 == LANEDET_WARNING)
+        return LANEDET_WARNING;
+    return LANEDET_SUCCESS;
 }
 
 /**
@@ -155,9 +155,9 @@ static int alm(std::vector<Point2f> &points, const int num_part, const int num_l
     if (points.size() != 2u * num_part)
     {
         std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-        return MAPRA_WARNING;
+        return LANEDET_WARNING;
     }
-    return MAPRA_SUCCESS;
+    return LANEDET_SUCCESS;
 }
 
 /**
@@ -167,7 +167,7 @@ static int alm(std::vector<Point2f> &points, const int num_part, const int num_l
  * @param num_part The number of partitions
  * @param coords_part Coordinates of the partitions
  * @param points Holds the converted Points 
- * @return Returns either MAPRA_SUCCESS or MAPRA_WARNING
+ * @return Returns either LANEDET_SUCCESS or LANEDET_WARNING
  * @note Storage order for both [left/right]_points: points belonging to same line are stored consecutively:
  *      Point_0(line_0), Point_1(line_0), Point_2(line_1), Point_3(line_1), ..., 
  *      Point_num_lines*2-1(line_num_lines-1), ..., Point_num_lines*num_part*2-1(line_num_lines*num_part-1) 
@@ -182,7 +182,7 @@ static int get_points(const std::vector<Vec2f> &lines, const int num_lines, cons
     if (lines.size() != 1u * num_lines * num_part)
     {
         std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-        return MAPRA_WARNING;
+        return LANEDET_WARNING;
     }
     points.clear();
     int i = 0;
@@ -213,9 +213,9 @@ static int get_points(const std::vector<Vec2f> &lines, const int num_lines, cons
     if (points.size() != 2u * num_part * num_lines)
     {
         std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-        return MAPRA_WARNING;
+        return LANEDET_WARNING;
     }
-    return MAPRA_SUCCESS;
+    return LANEDET_SUCCESS;
 }
 
 static int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Vec2f> &right_lines, const int num_lines,
@@ -228,18 +228,18 @@ static int get_points(const std::vector<Vec2f> &left_lines, const std::vector<Ve
 
 /**
  * Returns the two horizontal (x-coordinates) points (one for right/left half) with the maximum according to the histogram of the ROI
- * @param input_img is the binary input image
+ * @param img is the binary input image
  * @param roi Vertical starting point in percent of the region of interest
  * @param points holds the 2 x-coordinates according to the two max values of the histogram
- * @return Returns either MAPRA_SUCCESS or MAPRA_WARNING
+ * @return Returns either LANEDET_SUCCESS or LANEDET_WARNING
  * @note reduce() function could be optimized with an additional roi constraint
  */
-static int h_histogram(const Mat &input_img, const double roi, int *x_points)
+static int h_histogram(const Mat &img, const double roi, int *x_points)
 {
     std::vector<int> histo;
     //"sums up" along y-axis for each column -> returns a "row vector"
-    //new Mat is the only the roi part of input_img
-    reduce(Mat(input_img, Range(roi * input_img.rows, input_img.rows)), histo, 0, CV_REDUCE_SUM);
+    //new Mat is the only the roi part of img
+    reduce(Mat(img, Range(roi * img.rows, img.rows)), histo, 0, CV_REDUCE_SUM);
     int m1 = 0;
     int m2 = 0;
     x_points[0] = -1;
@@ -266,9 +266,9 @@ static int h_histogram(const Mat &input_img, const double roi, int *x_points)
     if (x_points[0] == -1 || x_points[1] == -1 || x_points[0] > x_points[1])
     {
         std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-        return MAPRA_WARNING;
+        return LANEDET_WARNING;
     }
-    return MAPRA_SUCCESS;
+    return LANEDET_SUCCESS;
 }
 
 /**
@@ -286,7 +286,7 @@ static int h_histogram(const Mat &input_img, const double roi, int *x_points)
  * @param b_view If true, Hough Transformation is slightly optimized for the bird-view-perspective
  * @param min_theta Should be 0
  * @param max_theta Should be CV_PI
- * @return Returns either MAPRA_SUCCESS, MAPRA_WARNING or MAPRA_ERROR
+ * @return Returns either LANEDET_SUCCESS, LANEDET_WARNING or LANEDET_ERROR
  * @note be aware that if the current line is similar (parrallel) to the previous line it gets ignored
  *       -> might cause problems with "bird eye view" (because then both road lines are parallel)
  * @note: add further failsafe (one more bool to check wheter birdsview or not and then
@@ -324,7 +324,7 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
     if (max_theta < min_theta)
     {
         CV_Error(CV_StsBadArg, "max_theta must be greater than min_theta");
-        return MAPRA_ERROR;
+        return LANEDET_ERROR;
     }
     int numangle = cvRound((max_theta - min_theta) / theta);
     int numrho = cvRound(((width + height) * 2 + 1) / rho);
@@ -549,9 +549,9 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
     if (left_lines.size() != (unsigned int)lines_max || right_lines.size() != (unsigned int)lines_max)
     {
         std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-        return MAPRA_WARNING;
+        return LANEDET_WARNING;
     }
-    return MAPRA_SUCCESS;
+    return LANEDET_SUCCESS;
 }
 
 /**
@@ -562,7 +562,7 @@ static int hough_lines_custom(const Mat &img, const float rho, const float theta
  * is the start point of the next line segment
  * @param left_points Holds the points-pairs for the left lane
  * @param left_points Holds the points-pairs for the right lane
- * @return Returns either MAPRA_WARNING or MAPRA_SUCESS
+ * @return Returns either LANEDET_WARNING or LANEDET_SUCESS
  * @note Calls pair_conversion(std::vector<Point2f>) once for each side
  */
 static int pair_conversion(std::vector<Point2f> &points)
@@ -581,7 +581,7 @@ static int pair_conversion(std::vector<Point2f> &points)
         if (cpy[i].y != cpy[i + 1].y)
         {
             std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-            return MAPRA_WARNING;
+            return LANEDET_WARNING;
         }
         points.push_back(Point2f(0.5 * (cpy[i].x + cpy[i + 1].x), cpy[i].y));
     }
@@ -590,8 +590,8 @@ static int pair_conversion(std::vector<Point2f> &points)
 
     assert(points.size() == 0.5 * cpy.size() + 1.);
     if (points.size() != 0.5 * cpy.size() + 1.)
-        return MAPRA_WARNING;
-    return MAPRA_SUCCESS;
+        return LANEDET_WARNING;
+    return LANEDET_SUCCESS;
 }
 
 static int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
@@ -610,7 +610,7 @@ static int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2
  * @param left_lines Vector holding the polar coordinates of the detected lines on the left side (lane)
  * @param right_lines Vector holding the polar coordinates of the detected lines on the right side (lane)
  * @param b_view If true, Hough Transformation is slightly optimized for the bird-view-perspective
- * @return Returns either MAPRA_SUCCESS, MAPRA_WARNING
+ * @return Returns either LANEDET_SUCCESS, LANEDET_WARNING
  * @note [left/right]_lines stores at the beginning num_lines lines of the first partition,
  * 		at the end num_lines lines of the last partition
  */
@@ -625,7 +625,7 @@ static int partitioned_hough(const Mat &img, const int *part_coords, const int n
     {
         //call hough for with the right start and end coordinats
         code = hough_lines_custom(img, 1., CV_PI / 180., 10, left_lines_tmp, right_lines_tmp, num_lines, part_coords[i], part_coords[i + 1], b_view);
-        if (code != MAPRA_SUCCESS)
+        if (code != LANEDET_SUCCESS)
             return code;
 
         //add the found lines from each partiton to vector with all lines
@@ -639,31 +639,31 @@ static int partitioned_hough(const Mat &img, const int *part_coords, const int n
         if (left_lines_tmp.size() != (unsigned int)num_lines || right_lines_tmp.size() != (unsigned int)num_lines)
         {
             std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-            return MAPRA_WARNING;
+            return LANEDET_WARNING;
         }
         
         left_lines_tmp.clear();
         right_lines_tmp.clear();
     }
-    return MAPRA_SUCCESS;
+    return LANEDET_SUCCESS;
 }
 
-static int sliding_windows_search(Mat &input_img, const double roi, const int num_windows, const int width, std::vector<Point2f> &points, const bool left)
+static int sliding_windows_search(Mat &img, const double roi, const int num_windows, const int width, std::vector<Point2f> &points, const bool left)
 {
     int upper_histo[2];
     points.clear();
     //has to be of type Point. Stores the idizes of white (non-black) pixels
     std::vector<Point> non_zero;
     //starting points for first windows (left and right half)
-    int code = h_histogram(input_img, roi, upper_histo);
-    if (code != MAPRA_SUCCESS)
+    int code = h_histogram(img, roi, upper_histo);
+    if (code != LANEDET_SUCCESS)
         return code;
 #ifndef NDEBUG
     std::cout << "histo done: " << upper_histo[0] << ", " << upper_histo[1] << std::endl;
 #endif
 
     //offsets from center points of window (starting points)
-    const int height = input_img.rows / num_windows - 1;
+    const int height = img.rows / num_windows - 1;
     const int y_offset = 0.5 * height + 1;
     const int x_offset = 0.5 * width;
     int x_tmp = 0;
@@ -677,25 +677,25 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
     else
     {
         x = upper_histo[1];
-        if (x + x_offset >= input_img.cols)
-            x = input_img.cols - 1 - x_offset;
+        if (x + x_offset >= img.cols)
+            x = img.cols - 1 - x_offset;
     }
 
     assert(x - x_offset >= 0);
     if (x - x_offset < 0)
     {
         std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-        return MAPRA_WARNING;
+        return LANEDET_WARNING;
     }
-    assert(x - x_offset + width < input_img.cols);
-    if (x - x_offset + width >= input_img.cols)
+    assert(x - x_offset + width < img.cols);
+    if (x - x_offset + width >= img.cols)
     {
         std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-        return MAPRA_WARNING;
+        return LANEDET_WARNING;
     }
 
     int y_tmp = 0;
-    int y = input_img.rows - y_offset;
+    int y = img.rows - y_offset;
 
     //iterate over the windows (from higher y coordinates towards lower y coordinates)
     for (int i = 0; i < num_windows; ++i)
@@ -703,20 +703,20 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
 #ifndef NDEBUG
         std::cout << "nonzero"
                   << " x: " << x - x_offset << ", y: " << y - y_offset << std::endl;
-        std::cout << "image c: " << input_img.cols << ", r: " << input_img.rows
+        std::cout << "image c: " << img.cols << ", r: " << img.rows
                   << ", width: " << width << ", height: " << height << std::endl;
 #endif
 
         try
         {
             //find all indizes of white (non black) pixels --> so we can compute the mean of them later
-            findNonZero(Mat(input_img, Rect(x - x_offset, y - y_offset, width, height)), non_zero);
+            findNonZero(Mat(img, Rect(x - x_offset, y - y_offset, width, height)), non_zero);
         }
         catch (cv::Exception &e)
         {
             //if sliding windows move out of the picture
             std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-            return MAPRA_WARNING;
+            return LANEDET_WARNING;
         }
 
 #ifndef NDEBUG
@@ -765,17 +765,17 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
         y -= height;
         x = x_tmp;
         //if new search coordinates are not in the image, they are probably not part of a road lane
-        assert(x + x_offset < input_img.cols);
-        if (x + x_offset >= input_img.cols)
+        assert(x + x_offset < img.cols);
+        if (x + x_offset >= img.cols)
         {
             std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-            return MAPRA_WARNING;
+            return LANEDET_WARNING;
         }
         assert(x - x_offset >= 0);
         if (x - x_offset < 0)
         {
             std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-            return MAPRA_WARNING;
+            return LANEDET_WARNING;
         }
 
         non_zero.clear();
@@ -784,9 +784,9 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
     if (points.size() != (unsigned int)num_windows)
     {
         std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-        return MAPRA_WARNING;
+        return LANEDET_WARNING;
     }
-    return MAPRA_SUCCESS;
+    return LANEDET_SUCCESS;
 }
 
 /**
@@ -844,10 +844,10 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
     std::vector<Vec2f> right_lines;
     //call hough for each partition and store multiple found lanes per partitions
     int code = partitioned_hough(img, coords_part, num_part, num_lines, left_lines, right_lines, b_view);
-    if (code != MAPRA_SUCCESS)
+    if (code != LANEDET_SUCCESS)
         return code;
     code = get_points(left_lines, right_lines, num_lines, num_part, coords_part, left_points, right_points);
-    if (code != MAPRA_SUCCESS)
+    if (code != LANEDET_SUCCESS)
         return code;
 
     //take the multiple found lanes and find the "best" combination of them
@@ -856,7 +856,7 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
 
     //compute the mean x-coordinate of the two line end/starting points on one partition boundary
     code = pair_conversion(left_points, right_points);
-    if (code != MAPRA_SUCCESS)
+    if (code != LANEDET_SUCCESS)
         return code;
     return check_codes(code1, code2);
 }
@@ -875,7 +875,7 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
 #ifndef NDEBUG
     std::cout << left_lines.size() << ", " << right_lines.size() << std::endl;
 #endif
-    if (code != MAPRA_SUCCESS)
+    if (code != LANEDET_SUCCESS)
         return code;
     //Transform line-coordinates from parameter space to coordinates space
     //Get the intersection points of partition borders and lines
@@ -885,7 +885,7 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
     if (left_points.size() != 2u * num_part || right_points.size() != 2u * num_part)
     {
         std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-        return MAPRA_WARNING;
+        return LANEDET_WARNING;
     }
 
 #ifndef NDEBUG
@@ -907,9 +907,9 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
     show_image("houg_part after conversion", img, true);
 #endif
 
-    if (code != MAPRA_SUCCESS)
+    if (code != LANEDET_SUCCESS)
         return code;
-    return MAPRA_SUCCESS;
+    return LANEDET_SUCCESS;
 }
 
 int random_search(Mat &img, const int num_lines, const double roi, const int num_part, const bool b_view, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
@@ -1028,7 +1028,7 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     if (left_points.size() != num_part * 2u || right_points.size() != num_part * 2u)
     {
         std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-        return MAPRA_WARNING;
+        return LANEDET_WARNING;
     }
 
 #ifndef NDEBUG
@@ -1044,7 +1044,7 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     //Compute and return the mean of the two points for each side with same y-coordinate (on partition boundary)
     pair_conversion(left_points, right_points);
 
-    return MAPRA_SUCCESS;
+    return LANEDET_SUCCESS;
 }
 
 int sliding_windows_search(Mat &img, const double roi, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
@@ -1054,7 +1054,7 @@ int sliding_windows_search(Mat &img, const double roi, const int num_windows, co
     return check_codes(code1, code2);
 }
 
-int window_search(const Mat &img, const int window_width, const double roi, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int fixed_window_search(const Mat &img, const int window_width, const double roi, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
 
     int input_points[2];
@@ -1076,7 +1076,7 @@ int window_search(const Mat &img, const int window_width, const double roi, std:
     const int offset = 0.1 * (1. - roi) * img.rows - 1;
     assert((low - offset >= 0) && (up + offset < img.rows));
     if ((low - offset < 0) || (up + offset >= img.rows))
-        return MAPRA_ERROR;
+        return LANEDET_ERROR;
 
     for (int r = -offset; r < offset; ++r)
     {
@@ -1117,8 +1117,8 @@ int window_search(const Mat &img, const int window_width, const double roi, std:
         if (left_points[i] == check_point || right_points[i] == check_point)
         {
             std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-            return MAPRA_WARNING;
+            return LANEDET_WARNING;
         }
     }
-    return MAPRA_SUCCESS;
+    return LANEDET_SUCCESS;
 }

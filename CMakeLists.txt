@@ -19,7 +19,7 @@
 #cmake_minimum_required(VERSION 3.1)  
 
 CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )
-PROJECT( mapra )
+PROJECT( lanedet )
 
 INCLUDE_DIRECTORIES( inc )
 

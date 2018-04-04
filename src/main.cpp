@@ -50,9 +50,9 @@ int main(int argc, char **argv)
     if (argc != 6)
     {
         std::cerr << "not right amount of args" << std::endl;
-        std::cerr << "Call like this: ./mapra <input_image_directory_path> <input_image_file_name> <result_directory_path> <parameter_file_path> <time_ouput_directory_path>" << std::endl;
-        std::cerr << "For Example:    ./mapra ../eval/eval_images/input/ um_000001.png ../eval/eval_images/tmp ../eval/eval_param/param_123.par ../eval/eval_results/" << std::endl;
-        return MAPRA_ERROR;
+        std::cerr << "Call like this: ./lanedet <input_image_directory_path> <input_image_file_name> <result_directory_path> <parameter_file_path> <time_ouput_directory_path>" << std::endl;
+        std::cerr << "For Example:    ./lanedet ../eval/eval_images/input/ um_000001.png ../eval/eval_images/tmp ../eval/eval_param/param_123.par ../eval/eval_results/" << std::endl;
+        return LANEDET_ERROR;
     }
     String input_dir = modify_dir(argv[1]);
     String input_file = argv[2];
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
     if (parameter_file.find(".par") == String::npos)
     {
         std::cerr << "wrong parameter file given" << std::endl;
-        return MAPRA_ERROR;
+        return LANEDET_ERROR;
     }
     String param_number = parameter_file.substr(parameter_file.find("param_") + 6, parameter_file.find(".par") - parameter_file.find("param_") - 6);
 #ifndef NDEBUG
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
     {
         //printf("No image data\n");
         std::cerr << "no image data" << std::endl;
-        return MAPRA_ERROR;
+        return LANEDET_ERROR;
     }
 
     //#############################################################################################
@@ -147,7 +147,7 @@ int main(int argc, char **argv)
     if (FILTERS.size() == 0u)
     {
         std::cerr << "error in filter read in" << std::endl;
-        return MAPRA_ERROR;
+        return LANEDET_ERROR;
     }
 
     //Canny Parameter
@@ -213,7 +213,7 @@ int main(int argc, char **argv)
         !check_param(ORDER, allowed_order))
     {
         std::cerr << "wrong commen parameters in param_file: " << parameter_file << std::endl;
-        return MAPRA_ERROR;
+        return LANEDET_ERROR;
     }
 
     //#############################################################################################
@@ -278,12 +278,12 @@ int main(int argc, char **argv)
         if (!check_param(NUM_PART, allowed_num_part))
         {
             std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
-            return MAPRA_ERROR;
+            return LANEDET_ERROR;
         }
 
         code = hough(image, left_points, right_points, NUM_PART, B_VIEW, ROI_START);
 
-        if (code != MAPRA_SUCCESS)
+        if (code != LANEDET_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             store_void_result(image, result_dir, output_file);
@@ -299,12 +299,12 @@ int main(int argc, char **argv)
         {
             std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             store_void_result(image, result_dir, output_file);
-            return MAPRA_ERROR;
+            return LANEDET_ERROR;
         }
 
         code = alm(image, left_points, right_points, NUM_PART, NUM_LINES, B_VIEW, ROI_START);
 
-        if (code != MAPRA_SUCCESS)
+        if (code != LANEDET_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             store_void_result(image, result_dir, output_file);
@@ -319,12 +319,12 @@ int main(int argc, char **argv)
             !check_param(W_WIDTH, allowed_w_width))
         {
             std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
-            return MAPRA_ERROR;
+            return LANEDET_ERROR;
         }
 
         code = sliding_windows_search(image, ROI_START, W_NUM_WINDOWS, W_WIDTH, left_points, right_points);
 
-        if (code != MAPRA_SUCCESS)
+        if (code != LANEDET_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             store_void_result(image, result_dir, output_file);
@@ -337,12 +337,12 @@ int main(int argc, char **argv)
         if (!check_param(W_WIDTH, allowed_w_width))
         {
             std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
-            return MAPRA_ERROR;
+            return LANEDET_ERROR;
         }
 
-        code = window_search(image, W_WIDTH, ROI_START, left_points, right_points);
+        code = fixed_window_search(image, W_WIDTH, ROI_START, left_points, right_points);
 
-        if (code != MAPRA_SUCCESS)
+        if (code != LANEDET_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             store_void_result(image, result_dir, output_file);
@@ -357,12 +357,12 @@ int main(int argc, char **argv)
             !check_param(NUM_PART, allowed_num_part))
         {
             std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
-            return MAPRA_ERROR;
+            return LANEDET_ERROR;
         }
 
         code = random_search(image, R_NUM_LINES, ROI_START, NUM_PART, B_VIEW, left_points, right_points);
 
-        if (code != MAPRA_SUCCESS)
+        if (code != LANEDET_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             store_void_result(image, result_dir, output_file);
@@ -372,7 +372,7 @@ int main(int argc, char **argv)
     else
     {
         std::cerr << "wrong Algo given" << std::endl;
-        return MAPRA_ERROR;
+        return LANEDET_ERROR;
     }
 
     //**********************************************************
@@ -402,16 +402,16 @@ int main(int argc, char **argv)
         show_image("normal", clone, true);
 #endif
         code = store_result(image, ROI_START, left_coeff, right_coeff, ORDER, result_dir, output_file, b_inv_mat);
-        if (code != MAPRA_SUCCESS)
+        if (code != LANEDET_SUCCESS)
             return code;
     }
     //in normal-view
     else
     {
         code = store_result(image, ROI_START, left_coeff, right_coeff, ORDER, result_dir, output_file);
-        if (code != MAPRA_SUCCESS)
+        if (code != LANEDET_SUCCESS)
             return code;
     }
 
-    return MAPRA_SUCCESS;
+    return LANEDET_SUCCESS;
 }
