@@ -113,7 +113,7 @@ void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, 
     {
 #ifndef NDEBUG
         static int i = 0;
-        show_image("multi_filter: " + std::to_string(i), image, true);
+        //show_image("multi_filter: " + std::to_string(i), image, true);
         show_image(std::to_string(i), f.second, true);
         ++i;
 #endif
