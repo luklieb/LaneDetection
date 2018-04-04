@@ -12,8 +12,8 @@ void bird_view(const Mat &input_img, Mat &output_img, const double rel_height, c
 {
     double offset = 0.4;
     double offset2 = 0.05;
+    //construct two trapezoids
     Point2f p1[4] = {Point2f(rel_left * input_img.cols, rel_height * input_img.rows), Point2f(rel_right * input_img.cols, rel_height * input_img.rows), Point2f((rel_right + offset) * input_img.cols, input_img.rows), Point2f((rel_left - offset) * input_img.cols, input_img.rows)};
-    //Point2f p2[4] = {Point2f(0, 0), Point2f(input_img.cols, 0), Point2f(input_img.cols, input_img.rows), Point2f(0, input_img.rows)};
     Point2f p2[4] = {Point2f((rel_left - offset2) * input_img.cols, 0), Point2f((rel_right + offset2) * input_img.cols, 0), Point2f((rel_right + offset2) * input_img.cols, input_img.rows), Point2f((rel_left - offset2) * input_img.cols, input_img.rows)};
 
     Mat mat = getPerspectiveTransform(p1, p2);
@@ -22,51 +22,18 @@ void bird_view(const Mat &input_img, Mat &output_img, const double rel_height, c
 
 void canny_blur(Mat &image, const int thres, const int kernel)
 {
+    //tmp image
     Mat proc;
+    //convert from color to gray (one channel, 8bit)
     cvtColor(image, proc, COLOR_BGR2GRAY);
+    //blur image
     blur(proc, proc, Size(3, 3));
+    //apply canny edge detection
     Canny(proc, image, thres, thres * 3, kernel);
 }
 
 void color_thres(Mat &image, const int thres)
 {
-
-    //boost whites for lanes in shadows...
-    //not good enough...
-    /*
-    cvtColor(image,image, COLOR_BGR2HSV);
-    Mat v;
-    extractChannel(image,v,2);
-    std::cout << "type: " << v.type() << std::endl;
-    std::cout << "size: " << v.size() << std::endl;
-    int thres1 = 125;
-    for(int y = 0; y < v.rows; ++y)
-        for (int x = 0; x < v.cols; ++x)
-            if(v.at<uchar>(y,x) >= thres1)
-                v.at<uchar>(y,x) = 255;
-    insertChannel(v, image, 2);
-    cvtColor(image,image, COLOR_HSV2BGR);
-    show_image("hsv", image, true);
-    */
-    //boost contrast for lanes in shadows...
-    //not good enough
-    /*
-    double limit = 40.;
-    Size tile (100,100);
-
-    cvtColor(image, image, COLOR_BGR2Lab);
-    Mat l;
-    extractChannel(image, l, 0);
-    Ptr<CLAHE> c = createCLAHE(limit, tile);
-    Mat cl;
-    c->apply(l,cl);
-    std::cout << cl.type() << std::endl;
-    insertChannel(cl, image, 0);
-    cvtColor(image, image, COLOR_Lab2BGR);
-    //image.convertTo(image, -1, 1., -50.);
-    show_image("contrast", image, true);
-*/
-
     //convert to HLS color space
     cvtColor(image, image, COLOR_BGR2HLS);
     //binary (one channel) temporary Mat
@@ -88,6 +55,7 @@ void color_thres(Mat &image, const int thres)
     threshold(image, image, thres, 255, THRESH_BINARY);
 }
 
+//deprecated
 void gabor(Mat &image)
 {
     int kernel_size = 40;
@@ -120,24 +88,26 @@ void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, 
     assert(*std::max_element(algos.begin(), algos.end()) <= 4 && *std::min_element(algos.begin(), algos.end()) >= 1);
     using namespace std::placeholders;
 
+    //add pair of wanted function and image Mat to call it on to a vector
+    //bind a copy of image to the function argument with a placeholder, rest of necessary arguments with correct other arguments
     std::vector<std::pair<std::function<void(Mat &)>, Mat>> fct_calls;
     if (any_of(algos.begin(), algos.end(), [](int i) { return i == 1; }))
         fct_calls.push_back(std::make_pair(std::bind(canny_blur, _1, ca_thres, kernel), image.clone()));
-    //if (any_of(algos.begin(), algos.end(), [](int i) { return i == 2; }))
-    //fct_calls.push_back(std::make_pair(std::bind([](Mat &i) { sobel_dir_thres(i); }, _1), image.clone()));
     if (any_of(algos.begin(), algos.end(), [](int i) { return i == 2; }))
         fct_calls.push_back(std::make_pair(std::bind(sobel_mag_thres, _1, s_mag), image.clone()));
-    //if (any_of(algos.begin(), algos.end(), [](int i) { return i == 3; }))
-    //fct_calls.push_back(std::make_pair(std::bind(sobel_par_thres, _1, s_par_x, s_par_y), image.clone()));
     if (any_of(algos.begin(), algos.end(), [](int i) { return i == 3; }))
         fct_calls.push_back(std::make_pair(std::bind(row_filter, _1, r_thres, r_tau), image.clone()));
     if (any_of(algos.begin(), algos.end(), [](int i) { return i == 4; }))
         fct_calls.push_back(std::make_pair(std::bind(color_thres, _1, c_thres), image.clone()));
 
+    //call functions in vector one after another
+    //processed image stays in second entry of pair
     for (auto &f : fct_calls)
         f.first(f.second);
 
+    //convert original image to gray (single channel, 8bit)
     cvtColor(image, image, COLOR_BGR2GRAY);
+    //set all pixels to white (=true =255)
     image = Scalar(255);
     for (auto &f : fct_calls)
     {
@@ -147,28 +117,38 @@ void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, 
         show_image(std::to_string(i), f.second, true);
         ++i;
 #endif
+        //get second entry of pair (processed copied image) and 
+        //unify individual pixels with original image pixels
         bitwise_and(image, f.second, image);
     }
 }
 
 void row_filter(Mat &image, const int thres, const int tau)
 {
+    //convert input image to gray (single channel, 8bit)
     cvtColor(image, image, COLOR_BGR2GRAY);
+    //create copy of input image
     Mat cpy = image.clone();
     uchar x_curr, x_m_t, x_p_t;
     for (int y = 0; y < cpy.rows; ++y)
     {
         for (int x = 0; x < cpy.cols; ++x)
         {
+            //current pixel value at (y,x)
             x_curr = cpy.at<uchar>(y, x);
+            //avoid boundary layers
+            //get pixel value from tau offset
             x_m_t = x - tau < 0 ? 0 : cpy.at<uchar>(y, x - tau);
             x_p_t = x + tau > cpy.cols ? cpy.cols : cpy.at<uchar>(y, x + tau);
+            //avoid overflow of 8 bit type
+            //compute new value for pixel from offset values
             image.at<uchar>(y, x) = saturate_cast<uchar>(2 * x_curr - (x_m_t + x_p_t) - abs(x_m_t - x_p_t));
         }
     }
     threshold(image, image, thres, 255, THRESH_BINARY);
 }
 
+//deprecated
 void sobel_dir_thres(Mat &image, const int thres_1, const int thres_2)
 {
     //helper needed for temporary conversion to CV_32F from CV_8U
@@ -226,6 +206,7 @@ void sobel_mag_thres(Mat &image, const int thres)
     threshold(image, image, thres, 255, THRESH_BINARY);
 }
 
+//deprecated
 void sobel_par_thres(Mat &image, const int thres_x, const int thres_y)
 {
     cvtColor(image, image, COLOR_BGR2GRAY);
@@ -243,6 +224,7 @@ void sobel_par_thres(Mat &image, const int thres_x, const int thres_y)
     //same for image2 in y direction
     Sobel(image2, image2, -1, 0, 1);
     absdiff(image2, Scalar::all(0), image2);
+    //get maximum pixel value of image2
     minMaxLoc(image2, (double *)0, &max_val);
     image2 *= (255. / max_val);
     threshold(image2, image2, thres_y, 255, THRESH_BINARY);

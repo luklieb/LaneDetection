@@ -17,11 +17,13 @@ void Parameter_reader::read(const std::string &filename) {
     parameters.close();
 }
 
-void show_image(const String image_name, const Mat &image, const bool wait)
+void show_image(const String image_name, const Mat &image, const bool wait, const String path)
 {
     namedWindow(image_name, WINDOW_AUTOSIZE);
     imshow(image_name, image);
     if (wait)
         waitKey(0);
+    else
+        imwrite(path+image_name, image);
 }
 

@@ -244,6 +244,8 @@ static int h_histogram(const Mat &input_img, const double roi, int *x_points)
     int m2 = 0;
     x_points[0] = -1;
     x_points[1] = -1;
+    //consider two halfes of image independently
+    //find "peak" in histogram for each side and store it in x_points array
     for (size_t i = 0; i < 0.5 * histo.size(); ++i)
     {
         if (histo[i] > m1)
@@ -621,11 +623,15 @@ static int partitioned_hough(const Mat &img, const int *part_coords, const int n
     int code;
     for (int i = 0; i < num_part; ++i)
     {
+        //call hough for with the right start and end coordinats
         code = hough_lines_custom(img, 1., CV_PI / 180., 10, left_lines_tmp, right_lines_tmp, num_lines, part_coords[i], part_coords[i + 1], b_view);
         if (code != MAPRA_SUCCESS)
             return code;
+
+        //add the found lines from each partiton to vector with all lines
         left_lines.insert(left_lines.end(), left_lines_tmp.begin(), left_lines_tmp.end());
         right_lines.insert(right_lines.end(), right_lines_tmp.begin(), right_lines_tmp.end());
+
 #ifndef NDEBUG
         std::cout << "part left size: " << left_lines_tmp.size() << ", part right size: " << right_lines_tmp.size() << ", part-coords i+1: " << part_coords[i + 1] << std::endl;
 #endif
@@ -635,6 +641,7 @@ static int partitioned_hough(const Mat &img, const int *part_coords, const int n
             std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
             return MAPRA_WARNING;
         }
+        
         left_lines_tmp.clear();
         right_lines_tmp.clear();
     }
@@ -647,13 +654,15 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
     points.clear();
     //has to be of type Point. Stores the idizes of white (non-black) pixels
     std::vector<Point> non_zero;
+    //starting points for first windows (left and right half)
     int code = h_histogram(input_img, roi, upper_histo);
     if (code != MAPRA_SUCCESS)
         return code;
 #ifndef NDEBUG
     std::cout << "histo done: " << upper_histo[0] << ", " << upper_histo[1] << std::endl;
 #endif
-    //offsets from center points of window
+
+    //offsets from center points of window (starting points)
     const int height = input_img.rows / num_windows - 1;
     const int y_offset = 0.5 * height + 1;
     const int x_offset = 0.5 * width;
@@ -684,9 +693,11 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
         std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
         return MAPRA_WARNING;
     }
+
     int y_tmp = 0;
     int y = input_img.rows - y_offset;
 
+    //iterate over the windows (from higher y coordinates towards lower y coordinates)
     for (int i = 0; i < num_windows; ++i)
     {
 #ifndef NDEBUG
@@ -827,9 +838,11 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
         const bool b_view, const double roi)
 {
     int coords_part[num_part + 1];
+    //supartition for roi in image
     sub_partition(roi * img.rows, img.rows, num_part, true, coords_part);
     std::vector<Vec2f> left_lines;
     std::vector<Vec2f> right_lines;
+    //call hough for each partition and store multiple found lanes per partitions
     int code = partitioned_hough(img, coords_part, num_part, num_lines, left_lines, right_lines, b_view);
     if (code != MAPRA_SUCCESS)
         return code;
@@ -837,9 +850,11 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
     if (code != MAPRA_SUCCESS)
         return code;
 
+    //take the multiple found lanes and find the "best" combination of them
     int code1 = alm(left_points, num_part, num_lines);
     int code2 = alm(right_points, num_part, num_lines);
 
+    //compute the mean x-coordinate of the two line end/starting points on one partition boundary
     code = pair_conversion(left_points, right_points);
     if (code != MAPRA_SUCCESS)
         return code;
@@ -959,6 +974,7 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
             line(img, Point2f(s_l, coords_part[part]), Point2f(e_l, coords_part[part + 1]), Scalar(128));
             line(img, Point2f(s_r, coords_part[part]), Point2f(e_r, coords_part[part + 1]), Scalar(128));
 #endif
+            //slope of lines like this: x = slope*y + t
             slope_l = height_inv * (e_l - s_l);
             slope_r = height_inv * (e_r - s_r);
 
@@ -1052,7 +1068,7 @@ int window_search(const Mat &img, const int window_width, const double roi, std:
     left_points.insert(left_points.begin(), 3, check_point);
     right_points.insert(right_points.begin(), 3, check_point);
     const uchar *image = img.ptr();
-    //3 search regions
+    //3 search regions (aka windows)
     const int low = 0.1 * (1. - roi) * img.rows + roi * img.rows;
     const int mid = 0.5 * (1. - roi) * img.rows + roi * img.rows;
     const int up = 0.9 * (1. - roi) * img.rows + roi * img.rows;

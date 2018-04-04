@@ -64,7 +64,7 @@ void h_sobel(Mat &image);
  * @param r_thres Threshold for the row_filter around (10-150)
  * @param r_tau Thickness of lane in pixels for the row_filter around (2-20)
  * @param c_thres Threshold for L-channel of HLS color space around (180-240)
- * @note 1 = canny, 2 = sobel_mag_thres, 3 = sobel_par_thres, 4 = color_thres
+ * @note 1 = canny, 2 = sobel_mag_thres, 3 = row_filter, 4 = color_thres
  * @note each number should only exit max. once in vector algos
  */
 void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, int s_mag, int r_thres, int r_tau, int c_thres);
