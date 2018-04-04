@@ -297,7 +297,7 @@ def main():
     times = getTimePerAlgo(ranges)
     print(times)
     plotTimes(times)
-    ratios = getRatioWarningsPerAlgo(ranges)
+    ratios = getRatioExitCodesPerAlgo(ranges)
     plotRatios(ratios)
     print(ratios)
     
