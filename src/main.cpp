@@ -105,7 +105,7 @@ int main(int argc, char **argv)
     const int NUM_PART = parameter.get_value<int>("num_part"); //2-5, for algo 1,2
     const std::vector<int> allowed_num_part = {2, 3, 4, 5};
     const int NUM_LINES = parameter.get_value<int>("num_lines"); //2-5, for algo 2
-    const std::vector<int> allowed_num_lines = {2, 3, 4, 5};
+    const std::vector<int> allowed_num_lines = {2, 3, 4, 5, 10};
     //Sliding Window Constants
     const int W_NUM_WINDOWS = parameter.get_value<int>("w_num_windows"); //4,5,7,9,11 for algo 3
     const std::vector<int> allowed_w_num_windows = {4, 5, 7, 9, 11};
@@ -258,7 +258,7 @@ int main(int argc, char **argv)
 
     multi_filter(image, FILTERS, CA_THRES, KERNEL, S_MAG, R_THRES, R_TAU, C_THRES);
 #ifndef NDEBUG
-    show_image("after multi filter", image, true);
+    show_image("after multi filter", image, false);
 #endif
 
     //**********************************************************

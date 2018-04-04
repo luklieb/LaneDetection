@@ -69,7 +69,7 @@ std::string modify_dir(T old_dir)
  * @param wait option to wait for a key input to close the window showing the image
  * @param path path where shown image should be stored, if wait = false
  */
-void show_image(const String image_name, const Mat &image, const bool wait, const String path = ".");
+void show_image(const String image_name, const Mat &image, const bool wait, const String path = "./");
 
 /**
  * Helper for printing std::vectors 

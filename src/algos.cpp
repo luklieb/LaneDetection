@@ -660,6 +660,8 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
         return code;
 #ifndef NDEBUG
     std::cout << "histo done: " << upper_histo[0] << ", " << upper_histo[1] << std::endl;
+    Mat color;
+    cvtColor(input_img, color, COLOR_GRAY2BGR);
 #endif
 
     //offsets from center points of window (starting points)
@@ -705,6 +707,10 @@ static int sliding_windows_search(Mat &input_img, const double roi, const int nu
                   << " x: " << x - x_offset << ", y: " << y - y_offset << std::endl;
         std::cout << "image c: " << input_img.cols << ", r: " << input_img.rows
                   << ", width: " << width << ", height: " << height << std::endl;
+        line(color, Point2f(x, y), Point2f(x, y), Scalar(0, 0, 255), 7);
+        line(color, Point2f(x, y), Point2f(x, y), Scalar(0, 0, 255), 7);
+        rectangle(color, Point2f(x - x_offset, y - y_offset), Point2f(x + x_offset, y + y_offset), Scalar(255), 2);
+        show_image("rectangle drawn", color, true);
 #endif
 
         try
@@ -850,12 +856,40 @@ int alm(const Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> 
     if (code != MAPRA_SUCCESS)
         return code;
 
+#ifndef NDEBUG
+    Mat color;
+    cvtColor(img, color, COLOR_GRAY2BGR);
+    for (auto l : coords_part)
+        line(color, Point2f(0, l), Point2f(img.cols, l), Scalar(255), 1);
+    for (auto p = left_points.begin(); p != left_points.end(); p += 2)
+        line(color, *p, *(p + 1), Scalar(80, 127, 255), 3);
+    for (auto p = right_points.begin(); p != right_points.end(); p += 2)
+        line(color, *p, *(p + 1), Scalar(80, 127, 255), 3);
+#endif
+
     //take the multiple found lanes and find the "best" combination of them
     int code1 = alm(left_points, num_part, num_lines);
     int code2 = alm(right_points, num_part, num_lines);
 
+#ifndef NDEBUG
+    for (auto p = left_points.begin(); p != left_points.end(); p += 2)
+        line(color, *p, *(p + 1), Scalar(0, 255), 2);
+    for (auto p = right_points.begin(); p != right_points.end(); p += 2)
+        line(color, *p, *(p + 1), Scalar(0, 255), 2);
+    
+#endif
+
     //compute the mean x-coordinate of the two line end/starting points on one partition boundary
     code = pair_conversion(left_points, right_points);
+
+#ifndef NDEBUG
+    for (auto p = left_points.begin(); p != left_points.end(); p += 1)
+        line(color, *p, *(p), Scalar(0, 0, 255), 7);
+    for (auto p = right_points.begin(); p != right_points.end(); p += 1)
+        line(color, *p, *(p), Scalar(0, 0, 255), 7);
+   show_image("alm after conversion", color, true);
+#endif
+
     if (code != MAPRA_SUCCESS)
         return code;
     return check_codes(code1, code2);
@@ -889,11 +923,16 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
     }
 
 #ifndef NDEBUG
+    Mat color;
+    cvtColor(img,color,COLOR_GRAY2BGR);
+    for(auto l:coords_part)
+        line(color, Point2f(0,l), Point2f(img.cols,l), Scalar(255), 1);
+
     for (auto p = left_points.begin(); p != left_points.end(); p += 2)
-        line(img, *p, *(p + 1), Scalar(255), 3);
+        line(color, *p, *(p + 1), Scalar(0,255), 2);
     for (auto p = right_points.begin(); p != right_points.end(); p += 2)
-        line(img, *p, *(p + 1), Scalar(255), 3);
-    show_image("houg_part", img, true);
+        line(color, *p, *(p + 1), Scalar(0,255), 2);
+    show_image("houg_part", color, true);
 #endif
 
     //Compute and return the mean of the two points for each side with same y-coordinate (on partition boundary)
@@ -901,10 +940,10 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
 
 #ifndef NDEBUG
     for (auto p = left_points.begin(); p != left_points.end(); p += 1)
-        line(img, *p, *(p), Scalar(255), 10);
+        line(color, *p, *(p), Scalar(0,0,255), 5);
     for (auto p = right_points.begin(); p != right_points.end(); p += 1)
-        line(img, *p, *(p), Scalar(255), 10);
-    show_image("houg_part after conversion", img, true);
+        line(color, *p, *(p), Scalar(0,0,255), 5);
+    show_image("houg_part after conversion", color, true);
 #endif
 
     if (code != MAPRA_SUCCESS)
@@ -950,6 +989,13 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     //x-coordinates of the current line
     int x_l_curr, x_r_curr;
 
+#ifndef NDEBUG
+    Mat color;
+    cvtColor(img, color, COLOR_GRAY2BGR);
+    for (auto l : coords_part)
+        line(color, Point2f(0, l), Point2f(img.cols, l), Scalar(255), 1);
+#endif
+
     //for each partition
     for (int part = 0; part < num_part; ++part)
     {
@@ -971,8 +1017,8 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
                 continue;
             ++l;
 #ifndef NDEBUG
-            line(img, Point2f(s_l, coords_part[part]), Point2f(e_l, coords_part[part + 1]), Scalar(128));
-            line(img, Point2f(s_r, coords_part[part]), Point2f(e_r, coords_part[part + 1]), Scalar(128));
+            line(color, Point2f(s_l, coords_part[part]), Point2f(e_l, coords_part[part + 1]), Scalar(70, 128, 255));
+            line(color, Point2f(s_r, coords_part[part]), Point2f(e_r, coords_part[part + 1]), Scalar(70, 128, 255));
 #endif
             //slope of lines like this: x = slope*y + t
             slope_l = height_inv * (e_l - s_l);
@@ -1032,17 +1078,25 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     }
 
 #ifndef NDEBUG
-    show_image("all random", img, true);
+    show_image("all random", color, true);
     for (auto p = left_points.begin(); p != left_points.end(); p += 2)
-        line(img, *p, *(p + 1), Scalar(255), 4);
+        line(color, *p, *(p + 1), Scalar(0,255), 4);
     for (auto p = right_points.begin(); p != right_points.end(); p += 2)
-        line(img, *p, *(p + 1), Scalar(255), 4);
+        line(color, *p, *(p + 1), Scalar(0,255), 4);
     std::cout << "num points after random(): " << left_points.size() << ", right: " << right_points.size() << std::endl;
-    show_image("random finished", img, true);
+    show_image("random finished", color, true);
 #endif
 
     //Compute and return the mean of the two points for each side with same y-coordinate (on partition boundary)
     pair_conversion(left_points, right_points);
+
+#ifndef NDEBUG
+    for(auto p : left_points)
+        line(color, p, p, Scalar(0,0,255), 7);
+    for(auto p : right_points)
+        line(color, p, p, Scalar(0,0,255), 7);
+    show_image("final random", color, true);
+#endif
 
     return MAPRA_SUCCESS;
 }
@@ -1061,6 +1115,10 @@ int window_search(const Mat &img, const int window_width, const double roi, std:
     h_histogram(img, roi, input_points);
 #ifndef NDEBUG
     std::cout << "input points: " << input_points[0] << ", " << input_points[1] << std::endl;
+    Mat color;
+    cvtColor(img, color, COLOR_GRAY2BGR);
+    line(color, Point2f(input_points[0], 0.5 * img.rows), Point2f(input_points[0], 0.5 * img.rows), Scalar(70, 128, 255), 7);
+    line(color, Point2f(input_points[1], 0.5 * img.rows), Point2f(input_points[1], 0.5 * img.rows), Scalar(70, 128, 255), 7);
 #endif
     left_points.clear();
     right_points.clear();
@@ -1097,18 +1155,24 @@ int window_search(const Mat &img, const int window_width, const double roi, std:
         }
     }
 #ifndef NDEBUG
-    std::cout << "multiple window search points found:" << std::endl;
+    for(auto p:input_points)
+    {
+        rectangle(color, Point2f(p - window_width, low - offset), Point2f(p + window_width, low + offset), Scalar(255));
+        rectangle(color, Point2f(p - window_width, mid - offset), Point2f(p + window_width, mid + offset), Scalar(255));
+        rectangle(color, Point2f(p - window_width, up - offset), Point2f(p + window_width, up + offset), Scalar(255));
+    }
+    std::cout << "fixed window search points found:" << std::endl;
     for (auto p : left_points)
     {
-        line(img, p, p, Scalar(255), 9);
+        line(color, p, p, Scalar(0, 0, 255), 7);
         std::cout << p << std::endl;
     }
     for (auto p : right_points)
     {
-        line(img, p, p, Scalar(255), 9);
+        line(color, p, p, Scalar(0, 0, 255), 7);
         std::cout << p << std::endl;
     }
-    show_image("window_s", img, true);
+    show_image("fixed_window", color, true);
 #endif
 
     for (int i = 0; i < 3; ++i)

@@ -112,9 +112,9 @@ void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, 
     for (auto &f : fct_calls)
     {
 #ifndef NDEBUG
-        static int i = 0;
+        static int i = 1;
         //show_image("multi_filter: " + std::to_string(i), image, true);
-        show_image(std::to_string(i), f.second, true);
+        show_image(std::to_string(i), f.second, false);
         ++i;
 #endif
         //get second entry of pair (processed copied image) and 
