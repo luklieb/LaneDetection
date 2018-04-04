@@ -295,9 +295,9 @@ def main():
     #getNumFiles(ranges)
     #ranges = [range(5551,5552), range(5552,5553), range(5553,5554), range(5554,5555), range(5555,5556)]
     #print(ranges)
-    #times = getTimePerAlgo(ranges)
-    #print(times)
-    #plotTimes(times)
+    times = getTimePerAlgo(ranges)
+    print(times)
+    plotTimes(times)
     #ratios = getRatioWarningsPerAlgo(ranges)
     #plotRatios(ratios)
     #print(ratios)
@@ -319,11 +319,11 @@ def main():
 
     #figure = getAverageFiguresPerAlgoForImage(ranges, 6)
     #plotAverageFigures(figure, "Average Figures For Image 6")
-    fig, best, worst = getBestFiguresPerAlgo(ranges, 50)
-    print(fig)
-    print(best)
-    print(worst)
-    plotAverageFigures(fig, "best ones")
+    #fig, best, worst = getBestFiguresPerAlgo(ranges, 50)
+    #print(fig)
+    #print(best)
+    #print(worst)
+    #plotAverageFigures(fig, "best ones")
 
 
 
