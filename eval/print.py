@@ -221,7 +221,7 @@ def getAverageFiguresPerAlgoForImage(ranges, image=6):
     return figures
 
 # Returns a list for the 5 algorithms. For each algorithm there is a list containing 15 tuples, each for one filter combination
-# [ [ (filter-comb, averaged figures, param-file-numer)*15 ]*5 ]
+# [ [ (filter-comb, averaged maxF, param-file-numer)*15 ]*5 ]
 def getBestFiltersPerAlgo(ranges):
     figures = []
     filters = [[1, 0, 0, 0], [0, 1, 0, 0], [0,0,1,0], [0,0,0,1], [1,1,0,0], [1,0,1,0], [1,0,0,1], [0,1,1,0], [0,1,0,1], [0,0,1,1], [1,1,1,0], [0,1,1,1], [1,0,1,1], [1,1,0,1], [1,1,1,1]]
@@ -255,6 +255,44 @@ def getBestFiltersPerAlgo(ranges):
         figures.append(figuresTmp)
     return figures
 
+# Returns a list with 5 list (one for each algorithm) holding two tuples, 
+# which hold info about b_view, averaged MaxF and the param-file-number
+# [ [ (b_view, averaged MaxF, param-file-number)*2 ]*5 ]
+def getBestBirdView(ranges):
+    figures = []
+    b_view = [0, 1]
+    for algoRange in ranges:
+        dictData = {}
+        dictParam = {}
+        figuresTmp = []
+        for curr in algoRange:
+            # Same as fct getAverageFiguresPerAlgo
+            # Now collect also data from the param_xxx.par files
+            singleData = pd.read_csv(os.path.join(
+                resultsDirName, "data" + str(curr)), sep=" ", usecols=[0, 1, 2, 3, 4, 5, 6], skiprows=[12])
+            paramData = (pd.read_csv(os.path.join(
+                paramDirName, "param_"+str(curr)+".par"), sep=" ", header=None, index_col=0))
+            dictData[curr] = singleData
+            dictParam[curr] = paramData
+        data = pd.concat(dictData)
+        # Compute mean per one result file
+        data = data.groupby(level=[0]).mean()
+        # "Transpose" parameter file data, so it is similar to the shape of the mean data columns and rows
+        param = pd.concat(dictParam).unstack(level=[0])
+        # Remove unnecessary toplevel called None from parameter values
+        param.columns = param.columns.droplevel(None)
+        # Finally append values from parameter files to the values from the data files
+        final = pd.concat([data, param], axis=1)
+        final.sort_values('#MaxF', ascending=False, inplace=True)
+        # Iterate over filter combinations
+        for b in b_view:
+            # Get best (first in sorted dataFrame) row with respective filter combination
+            best = final[final.b_view == b].head(1)
+            # Make a tuple with 3 entries (filter-combination, averaged figures, parameter-file-number)
+            figuresTmp.append((b, best.values.tolist()[0][0:1], best.index.values.tolist()))
+        figures.append(figuresTmp)
+    return figures
+
 # Makes and shows a bar plot for averaged figures from fct calls like:
 # getAverageFiguresPerAlgoForImage(), getAverageFiguresPerAlgo(), getBestFiguresPerAlg()
 # figure: should be list of 5 (=number algorithms) lists with each 7 (=number of figures) values
@@ -280,7 +318,7 @@ def plotBestFilter(figure):
     plt.legend(("Part. Hough", "ALM", "Sliding Windows",
                 "Fixed Windows", "Random"), loc='upper center', ncol=2, fancybox=True, bbox_to_anchor=(0.5, 1.1))
     plt.ylabel("MaxF in %")
-    plt.ylabel("Filter Combination")
+    plt.xlabel("Filter Combinations")
     plt.gca().set_ylim(40)
     plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
     plt.suptitle("Best Filter For Each Algorithm")
@@ -324,6 +362,22 @@ def plotTimes(times):
     plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
     #plt.gca().set_ylim(0.3)
     plt.suptitle("Execution time in sec")
+    plt.show()
+
+
+# Plots the return value from fct getBestBirdView()
+def plotBirdView(ranges):
+    x = np.arange(2)  # b_view on or off
+    for ind, f in enumerate(figures):
+        plt.bar(x+(-2+ind)*0.1, [x[1][0] for x in f], width=0.1)
+    plt.xticks(x, ("off", "on"))
+    plt.legend(("Part. Hough", "ALM", "Sliding Windows",
+                "Fixed Windows", "Random"))
+    plt.ylabel("MaxF in %")
+    plt.xlabel("Bird View off / on")
+    plt.gca().set_ylim(40)
+    plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
+    plt.suptitle("Best Bird View Setting For Each Algorithm")
     plt.show()
 
 
@@ -382,12 +436,22 @@ def main():
     figure = getBestFiltersPerAlgo(ranges)
     plotBestFilter(figure)
 
+    figure = getBestBirdView(ranges)
+    plotBirdView(figure)
+
 
 #names=["algo", "num_part", "num_lines", "w_num_lines", "w_width", "r_num_lines", "b_view", "f1", "f2", "f3", "f4", "order"]
 
 
 if __name__ == "__main__":
     main()
+
+
+    
+
+
+
+
 
 
 
