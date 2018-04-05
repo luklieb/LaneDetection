@@ -221,7 +221,7 @@ def getAverageFiguresPerAlgoForImage(ranges, image=6):
     return figures
 
 # Returns a list for the 5 algorithms. For each algorithm there is a list containing 15 tuples, each for one filter combination
-# [ [ (filter-comb, averaged maxF, param-file-numer)*15 ]*5 ]
+# [ [ (filter-comb, [averaged maxF], [param-file-numer])*15 ]*5 ]
 def getBestFiltersPerAlgo(ranges):
     figures = []
     filters = [[1, 0, 0, 0], [0, 1, 0, 0], [0,0,1,0], [0,0,0,1], [1,1,0,0], [1,0,1,0], [1,0,0,1], [0,1,1,0], [0,1,0,1], [0,0,1,1], [1,1,1,0], [0,1,1,1], [1,0,1,1], [1,1,0,1], [1,1,1,1]]
@@ -257,7 +257,7 @@ def getBestFiltersPerAlgo(ranges):
 
 # Returns a list with 5 list (one for each algorithm) holding two tuples, 
 # which hold info about b_view, averaged MaxF and the param-file-number
-# [ [ (b_view, averaged MaxF, param-file-number)*2 ]*5 ]
+# [ [ (b_view, [averaged MaxF], [param-file-number])*2 ]*5 ]
 def getBestBirdView(ranges):
     figures = []
     b_view = [0, 1]
@@ -290,6 +290,55 @@ def getBestBirdView(ranges):
             best = final[final.b_view == b].head(1)
             # Make a tuple with 3 entries (filter-combination, averaged figures, parameter-file-number)
             figuresTmp.append((b, best.values.tolist()[0][0:1], best.index.values.tolist()))
+        figures.append(figuresTmp)
+    return figures
+
+# Returns a list with 5 list (one for each algorithm) holding two tuples,
+# which hold info about order, averaged MaxF and the param-file-number
+# [ [ (order, [averaged MaxF], [param-file-number])*2 ]*5 ]
+def getBestOrder(ranges):
+    figures = []
+    order = [2, 3]
+    for it, algoRange in enumerate(ranges):
+        dictData = {}
+        dictParam = {}
+        figuresTmp = []
+        for curr in algoRange:
+            # Same as fct getAverageFiguresPerAlgo
+            # Now collect also data from the param_xxx.par files
+            singleData = pd.read_csv(os.path.join(
+                resultsDirName, "data" + str(curr)), sep=" ", usecols=[0, 1, 2, 3, 4, 5, 6], skiprows=[12])
+            paramData = (pd.read_csv(os.path.join(
+                paramDirName, "param_"+str(curr)+".par"), sep=" ", header=None, index_col=0))
+            dictData[curr] = singleData
+            dictParam[curr] = paramData
+        data = pd.concat(dictData)
+        # Compute mean per one result file
+        data = data.groupby(level=[0]).mean()
+        # "Transpose" parameter file data, so it is similar to the shape of the mean data columns and rows
+        param = pd.concat(dictParam).unstack(level=[0])
+        # Remove unnecessary toplevel called None from parameter values
+        param.columns = param.columns.droplevel(None)
+        # Finally append values from parameter files to the values from the data files
+        final = pd.concat([data, param], axis=1)
+        final.sort_values('#MaxF', ascending=False, inplace=True)
+        # Iterate over filter combinations
+        print(it)
+        for o in order:
+            # Special treatment for fixed-window algorithm (fourth one), because
+            # it only exclusively uses order of 2
+            if it != 3:
+                # Get best (first in sorted dataFrame) row with respective filter combination
+                best = final[final.order == o].head(1)
+                # Make a tuple with 3 entries (filter-combination, averaged figures, parameter-file-number)
+                figuresTmp.append((o, best.values.tolist()[0][0:1], best.index.values.tolist()))
+            else:
+                f = [0]
+                index = [-1]
+                if o == 2:
+                    f = final[final.order == o].head(1).values.tolist()[0][0:1]
+                    index = final[final.order == o].head(1).index.values.tolist()
+                figuresTmp.append((o, f, index))
         figures.append(figuresTmp)
     return figures
 
@@ -380,6 +429,19 @@ def plotBirdView(figures):
     plt.suptitle("Best Bird View Setting For Each Algorithm")
     plt.show()
 
+# Plots the return value from fct getBestOrder()
+def plotOrder(figures):
+    x = np.arange(2)  # order 2 or 3
+    for ind, f in enumerate(figures):
+        plt.bar(x+(-2+ind)*0.1, [x[1][0] for x in f], width=0.1)
+    plt.xticks(x, ("2", "3"))
+    plt.legend(("Part. Hough", "ALM", "Sliding Windows", "Fixed Windows", "Random"))
+    plt.ylabel("MaxF in %")
+    plt.xlabel("Order of Polynomial")
+    plt.gca().set_ylim(40)
+    plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
+    plt.suptitle("Best Order Of Polynomial For Each Algorithm")
+    plt.show()
 
 
 
@@ -450,7 +512,13 @@ if __name__ == "__main__":
 
 
 
-    
+
+
+
+
+
+
+
 
 
 
