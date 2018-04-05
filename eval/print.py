@@ -366,7 +366,7 @@ def plotTimes(times):
 
 
 # Plots the return value from fct getBestBirdView()
-def plotBirdView(ranges):
+def plotBirdView(figures):
     x = np.arange(2)  # b_view on or off
     for ind, f in enumerate(figures):
         plt.bar(x+(-2+ind)*0.1, [x[1][0] for x in f], width=0.1)
@@ -445,6 +445,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
 
 
     
