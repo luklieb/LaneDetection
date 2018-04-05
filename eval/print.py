@@ -220,6 +220,41 @@ def getAverageFiguresPerAlgoForImage(ranges, image=6):
         figures.append(mean.values.tolist())
     return figures
 
+# Returns a list for the 5 algorithms. For each algorithm there is a list containing 15 tuples, each for one filter combination
+# [ [ (filter-comb, averaged figures, param-file-numer)*15 ]*5 ]
+def getBestFiltersPerAlgo(ranges):
+    figures = []
+    filters = [[1, 0, 0, 0], [0, 1, 0, 0], [0,0,1,0], [0,0,0,1], [1,1,0,0], [1,0,1,0], [1,0,0,1], [0,1,1,0], [0,1,0,1], [0,0,1,1], [1,1,1,0], [0,1,1,1], [1,0,1,1], [1,1,0,1], [1,1,1,1]]
+    for algoRange in ranges:
+        dictData = {}
+        dictParam = {}
+        figuresTmp = []
+        for curr in algoRange:
+            # Same as fct getAverageFiguresPerAlgo
+            # Now collect also data from the param_xxx.par files
+            singleData = pd.read_csv(os.path.join(resultsDirName, "data" + str(curr)), sep=" ", usecols=[0, 1, 2, 3, 4, 5, 6], skiprows=[12] )
+            paramData = (pd.read_csv(os.path.join(paramDirName, "param_"+str(curr)+".par"), sep=" ", header=None, index_col=0))
+            dictData[curr] = singleData
+            dictParam[curr] = paramData
+        data = pd.concat(dictData)
+        # Compute mean per one result file
+        data = data.groupby(level=[0]).mean()
+        # "Transpose" parameter file data, so it is similar to the shape of the mean data columns and rows
+        param = pd.concat(dictParam).unstack(level=[0])
+        # Remove unnecessary toplevel called None from parameter values 
+        param.columns = param.columns.droplevel(None)
+        # Finally append values from parameter files to the values from the data files
+        final = pd.concat([data, param], axis=1)
+        final.sort_values('#MaxF', ascending=False, inplace=True)
+        # Iterate over filter combinations
+        for f in filters:
+            # Get best (first in sorted dataFrame) row with respective filter combination
+            best = final[(final.filter1 == f[0]) & (final.filter2 == f[1]) & (final.filter3 == f[2]) & (final.filter4 == f[3])].head(1)
+            # Make a tuple with 3 entries (filter-combination, averaged figures, parameter-file-number)
+            figuresTmp.append((f, best.values.tolist()[0][0:1], best.index.values.tolist()))
+        figures.append(figuresTmp)
+    return figures
+
 # Makes and shows a bar plot for averaged figures from fct calls like:
 # getAverageFiguresPerAlgoForImage(), getAverageFiguresPerAlgo(), getBestFiguresPerAlg()
 # figure: should be list of 5 (=number algorithms) lists with each 7 (=number of figures) values
@@ -233,6 +268,22 @@ def plotAverageFigures(figure, title):
                 "Fixed Windows", "Random"))
     plt.ylabel("%")
     plt.suptitle(title)
+    plt.show()
+
+
+# Plots the output from fct getBestFiltersPerAlgo()
+def plotBestFilter(figure):
+    x = np.arange(15)  # 15 diff. filter comb.
+    for ind, f in enumerate(figure):
+        plt.bar(x+(-2+ind)*0.1, [x[1][0] for x in f], width=0.1)
+    plt.xticks(x, ("1", "2", "3", "4", "1,2", "1,3", "1,4", "2,3", "2,4", "3,4", "1,2,3", "2,3,4", "1,3,4", "1,2,4", "1,2,3,4"))
+    plt.legend(("Part. Hough", "ALM", "Sliding Windows",
+                "Fixed Windows", "Random"), loc='upper center', ncol=2, fancybox=True, bbox_to_anchor=(0.5, 1.1))
+    plt.ylabel("MaxF in %")
+    plt.ylabel("Filter Combination")
+    plt.gca().set_ylim(40)
+    plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
+    plt.suptitle("Best Filter For Each Algorithm")
     plt.show()
 
 # Makes and shows a bar plot for the ratios from fct calls like:
@@ -328,10 +379,15 @@ def main():
     print(worst)
     plotAverageFigures(fig, "Average Figures For {} Best Configurations".format(n))
 
+    figure = getBestFiltersPerAlgo(ranges)
+    plotBestFilter(figure)
 
 
-
+#names=["algo", "num_part", "num_lines", "w_num_lines", "w_width", "r_num_lines", "b_view", "f1", "f2", "f3", "f4", "order"]
 
 
 if __name__ == "__main__":
     main()
+
+
+
