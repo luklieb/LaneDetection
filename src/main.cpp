@@ -102,7 +102,7 @@ int main(int argc, char **argv)
     //1 = part. Hough, 2 = ALM, 3 = Sliding Window, 4 = Multiple Window, 5 = Random lines
     const int ALGO = parameter.get_value<int>("algo"); //1,2,3,4
     //Amount of partitions and lines
-    const int NUM_PART = parameter.get_value<int>("num_part"); //2-5, for algo 1,2
+    const int NUM_PART = parameter.get_value<int>("num_part"); //2-5, for algo 1,2,5
     const std::vector<int> allowed_num_part = {2, 3, 4, 5};
     const int NUM_LINES = parameter.get_value<int>("num_lines"); //2-5, for algo 2
     const std::vector<int> allowed_num_lines = {2, 3, 4, 5};
@@ -113,7 +113,7 @@ int main(int argc, char **argv)
     const std::vector<int> allowed_w_width = {20, 40, 60, 80};
 
     //Random search constants
-    const int R_NUM_LINES = parameter.get_value<int>("r_num_lines"); //200, 400, 600, 800 for algo5
+    const int R_NUM_LINES = parameter.get_value<int>("r_num_lines"); //200, 400, 600, 800 for algo 5
     const std::vector<int> allowed_r_num_lines = {200, 400, 600, 800};
 
     //Birdview Constants manually set once
