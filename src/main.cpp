@@ -9,6 +9,7 @@
 #include "fitting.hpp"
 #include "helper.hpp"
 #include "calibration.hpp"
+#include <gperftools/profiler.h>
 
 using namespace cv;
 
@@ -100,9 +101,9 @@ int main(int argc, char **argv)
     parameter.read(parameter_file);
 
     //1 = part. Hough, 2 = ALM, 3 = Sliding Window, 4 = Multiple Window, 5 = Random lines
-    const int ALGO = parameter.get_value<int>("algo"); //1,2,3,4
+    const int ALGO = parameter.get_value<int>("algo"); //1,2,3,4,5
     //Amount of partitions and lines
-    const int NUM_PART = parameter.get_value<int>("num_part"); //2-5, for algo 1,2
+    const int NUM_PART = parameter.get_value<int>("num_part"); //2-5, for algo 1,2,5
     const std::vector<int> allowed_num_part = {2, 3, 4, 5};
     const int NUM_LINES = parameter.get_value<int>("num_lines"); //2-5, for algo 2
     const std::vector<int> allowed_num_lines = {2, 3, 4, 5};
@@ -113,7 +114,7 @@ int main(int argc, char **argv)
     const std::vector<int> allowed_w_width = {20, 40, 60, 80};
 
     //Random search constants
-    const int R_NUM_LINES = parameter.get_value<int>("r_num_lines"); //200, 400, 600, 800 for algo5
+    const int R_NUM_LINES = parameter.get_value<int>("r_num_lines"); //200, 400, 600, 800 for algo 5
     const std::vector<int> allowed_r_num_lines = {200, 400, 600, 800};
 
     //Birdview Constants manually set once
@@ -228,8 +229,9 @@ int main(int argc, char **argv)
     //Comment next two lines out for actual lane detection
     //calibration = image.clone(); //used for b_view_calibration()
     //b_view_calibration(&calibration, B_OFFSET_MID, B_OFFSET, B_OFFSET2, B_HEIGHT);
-
+    cvtColor(image.clone(), clone, COLOR_BGR2GRAY);
     Timer time_measurement;
+    ProfilerStart("test.prof");
 
     if (B_VIEW)
     {
@@ -384,6 +386,7 @@ int main(int argc, char **argv)
 
     poly_reg(left_points, right_points, left_coeff, right_coeff, ORDER);
 
+    ProfilerStop();
     //stop time measurement
     //append measured time to time file
     double time_final = time_measurement.elapsed();

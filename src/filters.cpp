@@ -85,6 +85,7 @@ void h_sobel(Mat &image)
 
 void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, int s_mag, int r_thres, int r_tau, int c_thres)
 {
+
     assert(*std::max_element(algos.begin(), algos.end()) <= 4 && *std::min_element(algos.begin(), algos.end()) >= 1);
     using namespace std::placeholders;
 
