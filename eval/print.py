@@ -446,7 +446,7 @@ def plotOrder(figures):
 
 # Profiling data from /report/profiling
 def plotProfiling():
-    # Plot Algo times + bird view in comparison
+    # Plot Algo times + bird view + filters  in comparison
     x = np.arange(8) #fastest, slowest, b_view, f1, f2, f3, f4, multi_filter
     b_view = 1.75
     algoTimes = [[2, 10, 0, 0, 0, 0, 0, 0], [2, 14, 0, 0, 0, 0, 0, 0], [
@@ -468,9 +468,6 @@ def plotProfiling():
     plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
     plt.suptitle("Profiling Of Algorithms + Bird View + Filters")
     plt.show()
-    
-    # Plot filter times
-
 
 
 
