@@ -444,6 +444,34 @@ def plotOrder(figures):
     plt.suptitle("Best Order Of Polynomial For Each Algorithm")
     plt.show()
 
+# Profiling data from /report/profiling
+def plotProfiling():
+    # Plot Algo times + bird view in comparison
+    x = np.arange(8) #fastest, slowest, b_view, f1, f2, f3, f4, multi_filter
+    b_view = 1.75
+    algoTimes = [[2, 10, 0, 0, 0, 0, 0, 0], [2, 14, 0, 0, 0, 0, 0, 0], [
+        0.25, 0.5, 0, 0, 0, 0, 0, 0], [0.25, 0.25, 0, 0, 0, 0, 0, 0], [1, 3, 0, 0, 0, 0, 0, 0]]
+    filterTimes = [3.5, 1.5, 1.25, 0.5, 1.75]
+    for ind, a in enumerate(algoTimes):
+        plt.bar(x+(-2+ind)*0.15, a, width=0.15)
+    plt.bar(x, [0, 0, b_view, 0, 0, 0, 0, 0], width=0.15)
+    for ind, f in enumerate(filterTimes):
+        tmp = [0]*(3+ind)
+        tmp.append(f)
+        for i in range(4-ind):
+            tmp.append(0)
+        plt.bar(x, tmp, width=0.15)
+    plt.yscale('log')
+    plt.xticks(x, ("Fastest", "Slowest", "Bird_View", "Canny", "Sobel_Mag", "Row", "Color_Thres", "Filter Overhead"))
+    plt.legend(("Part. Hough", "ALM", "Sliding Windows","Fixed Windows", "Random"))
+    plt.ylabel("Time [ms]")
+    plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
+    plt.suptitle("Profiling Of Algorithms + Bird View + Filters")
+    plt.show()
+    
+    # Plot filter times
+
+
 
 
 def main():
@@ -492,7 +520,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    #main()
+    plotProfiling()
 
 
 
