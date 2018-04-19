@@ -10,7 +10,7 @@ Für Python3 benötigt man außerdem folgende Module: pandas, numpy, matplotlib
 Es gibt drei Branches ```master```, ```profiling``` (zum Profiling mit gperftools) und ```graphicsPresentation``` (zum Erzeugen von Bilder/Graphiken für die Presentation)
 Beachte auch den **Tag "v1.2"** im ```master``` Branch. Dieser ist der Commit der letzten Änderung am Quellcode.
 
-Siehe auch: Zusätzliche Infos über das Projekt erhält man im [**SDI/wikis/Fahrspurerkennungs**](https://i3gitlab.informatik.uni-erlangen.de/SDI/SDI/wikis/Fahrspurerkennung) Wiki
+Siehe auch: Zusätzliche Infos über das Projekt erhält man im dazugehörigen [**Wiki**](https://i3gitlab.informatik.uni-erlangen.de/SDI/SDI/wikis/Fahrspurerkennung)
 Außerdem kann man die Evaluationsergebnisse im [**Projektbericht**](report/latex/thesis.pdf) nachlesen.
 
 ## Projekt bauen
