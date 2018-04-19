@@ -104,6 +104,12 @@ In Datei ```eval/print.py```
 Es werden mehrere Graphen erstellt. Die Evaluationsdaten müssen im Order ```eval/eval_results/``` vorhanden sein.
 
 
+## Profiling
+
+Wenn man die Laufzeiten und Abhängigkeiten einzelner Funktionen betrachten möchte, dann kann man im Branch ```profiling``` mit den **gperftools** (*Google Performance Tools*) Messungen durchführen. 
+Dazu muss die Bibliothek vorhandne sein und die Profiling Option in Cmake aktiviert sein.
+
+
 ## Koordinatensystem 
 
 Achtung beim openCV Koordinatensystem! Die linke "obere" Ecke eines Bildes entspricht dem Koordinatenursprung. In meiner Dokumentation wird daher von der linken unteren Ecke gesprochen.
