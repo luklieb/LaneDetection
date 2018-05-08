@@ -26,6 +26,7 @@ INCLUDE_DIRECTORIES( inc )
 FILE( GLOB srcs
 	"src/*.cpp")
 
+SET( OpenCV_DIR "/home/pi/libs/opencv-3.1.1-optimized/share/OpenCV" )
 FIND_PACKAGE(OpenCV REQUIRED)
 MESSAGE(STATUS "OpenCV library statuss:")
 MESSAGE(STATUS "    version: ${OpenCV_VERSION}")
@@ -52,7 +53,7 @@ IF( ENABLE_WERROR )
     SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror" )
 ENDIF()
 IF( ARCHITECTURE_OPTIMAZATION )
-    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native" )
+    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -mcpu=cortex-a7 -mfpu=neon-vfpv4 -ftree-vectorize -mfloat-abi=hard" )
     MESSAGE(STATUS "Optimizations on")
 ENDIF()
 

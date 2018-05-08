@@ -229,6 +229,9 @@ int main(int argc, char **argv)
     //calibration = image.clone(); //used for b_view_calibration()
     //b_view_calibration(&calibration, B_OFFSET_MID, B_OFFSET, B_OFFSET2, B_HEIGHT);
 
+
+    cvtColor(image.clone(), clone, COLOR_BGR2GRAY);
+
     Timer time_measurement;
 
     if (B_VIEW)
@@ -412,6 +415,6 @@ int main(int argc, char **argv)
         if (code != LANEDET_SUCCESS)
             return code;
     }
-
+    std::cout << clone.channels() << std::endl;
     return LANEDET_SUCCESS;
 }

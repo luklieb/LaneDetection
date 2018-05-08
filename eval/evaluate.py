@@ -31,7 +31,8 @@ def getPngs(path):
 
 def getParameterFiles(path):
     return [f for f in sorted(os.listdir(path)) if f.endswith(".par")]
-
+    #paths = sorted(glob(os.path.join(path, "param_[336,337,338,339,34,35,36,37,38,39,4,5,6,7,8,9]*.par")))
+    #return [os.path.basename(f) for f in paths]
 # Matches numbers between a '_' and '.par' (i.e. "file_123.par" matches to and returns "123")
 
 
