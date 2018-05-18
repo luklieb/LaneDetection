@@ -53,7 +53,7 @@ IF( ENABLE_WERROR )
     SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror" )
 ENDIF()
 IF( ARCHITECTURE_OPTIMAZATION )
-    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -mcpu=cortex-a7 -mfpu=neon-vfpv4 -ftree-vectorize -mfloat-abi=hard" )
+    SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -mtune=cortex-a53 -march=armv8-a -mneon-for-64bits -mfpu=neon-fp-armv8 -ftree-vectorize -mfloat-abi=hard" )
     MESSAGE(STATUS "Optimizations on")
 ENDIF()
 

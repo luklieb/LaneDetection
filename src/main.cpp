@@ -394,7 +394,7 @@ int main(int argc, char **argv)
     time_file.open(time_dir + "time" + param_number, std::ios::app);
     time_file << time_final << std::endl;
     time_file.close();
-    std::cout << "time in sec: " time_final << std::endl;
+    std::cout << "time in sec: " << time_final << std::endl;
 
     if (B_VIEW)
     {

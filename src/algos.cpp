@@ -950,6 +950,13 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     //x-coordinates of the current line
     int x_l_curr, x_r_curr;
 
+	uchar* img_data = img.data;
+	
+	uint8x8_t compare1 = vcreate_u8(0x0101010101010101);
+	uint8x16_t compare = vcombine_u8(compare1, compare1);
+
+
+
     //for each partition
     for (int part = 0; part < num_part; ++part)
     {
@@ -984,23 +991,48 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
                 x_l_curr = y * slope_l + s_l;
                 x_r_curr = y * slope_r + s_r;
 
-                if (x_l_curr < 0 || x_l_curr > img.cols || x_r_curr < 0 || x_r_curr > img.cols || x_l_curr > image_split*img.cols || x_r_curr < (1.-image_split)*img.cols)
+                if (x_l_curr-offset_x < 0 || x_l_curr+offset_x > img.cols || x_r_curr-offset_x < 0 || x_r_curr+offset_x > img.cols || x_l_curr > image_split*img.cols || x_r_curr < (1.-image_split)*img.cols)
                 {
                     //normal distribution might give us points that are outside of the image
                     //-> skip them
                     continue;
                 }
 
+			/*		int tmpr = 0;
+					int tmpl = 0;
                 //search for 2*offset_x pixels around the line for white pixels
                 //(only if pixel is in the image [0, img.cols])
                 for (int x_offset = -offset_x; x_offset <= (int)offset_x; ++x_offset)
                 {
-                    if (x_l_curr + x_offset > 0 && x_l_curr + x_offset < img.cols && img.at<uchar>(y + coords_part[part], x_l_curr + x_offset) >= 250)
-                        ++score_l;
-                    if (x_r_curr + x_offset > 0 && x_r_curr + x_offset < img.cols && img.at<uchar>(y + coords_part[part], x_r_curr + x_offset) >= 250)
-                        ++score_r;
-                }
-            }
+                    if (img.at<uchar>(y + coords_part[part], x_l_curr + x_offset) >= 250)
+                    {
+						++tmpl;
+						++score_l;
+                    }
+					if (img.cols && img.at<uchar>(y + coords_part[part], x_r_curr + x_offset) >= 250)
+                    {    
+						++tmpr;
+						++score_r;
+                	}
+				}
+						
+					std::cout << "normal l: " << tmpl << std::endl;
+				*/
+				//NEON
+				uchar A [16];
+				uchar B [16];
+				uint8x16_t left = vld1q_u8(img_data + ((y+coords_part[part])*img.cols+x_l_curr-offset_x));
+				uint8x16_t right = vld1q_u8(img_data +((y*coords_part[part])*img.cols+x_r_curr-offset_x));
+            	left = vandq_u8(compare, left);
+				right = vandq_u8(compare, right);
+
+				vst1q_u8(A, left);
+				vst1q_u8(B, right);
+				score_l += A[0]+A[1]+A[2]+A[3]+A[4]+A[5]+A[6]+A[7]+A[8]+A[9]+A[10];
+				score_r += B[0]+B[1]+B[2]+B[3]+B[4]+B[5]+B[6]+B[7]+B[8]+B[9]+B[10];
+				//std::cout << "neon l: " <<  vaddvq_u8(left) << std::endl;
+				//std::cout << "neon r: " <<  vaddvq_u8(right) << std::endl;
+			}
             //store current configuration for both sides
             //if it is better than the all time best
             if (score_l > score_l_best)

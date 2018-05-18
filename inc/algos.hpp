@@ -6,6 +6,8 @@
 #include <cmath>
 #include <string>
 #include <random>
+#include <iomanip>
+#include <arm_neon.h>
 #include "codes.hpp"
 #include "helper.hpp"
 
