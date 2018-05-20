@@ -594,7 +594,7 @@ static int pair_conversion(std::vector<Point2f> &points)
     return LANEDET_SUCCESS;
 }
 
-static int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+int pair_conversion(std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
     int code1 = pair_conversion(left_points);
     int code2 = pair_conversion(right_points);
@@ -797,7 +797,7 @@ static int sliding_windows_search(Mat &img, const double roi, const int num_wind
  * @param number of sub-domains
  * @param coords array of length number+1, returns the coordinates of the sub-domain borders (including start and end)
  */
-static void sub_partition(const int start, const int end, const int number, const bool equidistant, int *coords)
+void sub_partition(const int start, const int end, const int number, const bool equidistant, int *coords)
 {
     assert(end > start);
     double factor = 1.;
@@ -912,172 +912,7 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
     return LANEDET_SUCCESS;
 }
 
-int random_search(Mat &img, const int num_lines, const double roi, const int num_part, const bool b_view, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
-{
-    //0% overlap for each half
-    const double image_split = 0.5;
-    //range to search around current line for white pixels
-    const unsigned int offset_x = 5;
-    //standard deviation for normal distribution
-    const double sigma = 70.;
-    //mean for left side distribution (closer to middle of picture)
-    const double m_l = 0.75 * img.cols * 0.55;
-    //mean for right side distribution (closer to middle of picture)
-    const double m_r = img.cols - m_l - 1.;
-    //maximum amount of pixels, that e_l-s_l respectively -(e_r-s_r) can differ
-    //this excludes lines with wrong slope
-    //-> most of left lines are right leaning, most of right lines are left leaning (same as road lanes)
-    const int pixel_diff = 50;
 
-    std::default_random_engine generator;
-    std::normal_distribution<double> dist_left(m_l, sigma);
-    std::normal_distribution<double> dist_right(m_r, sigma);
-    //coordinates of partition borders
-    int coords_part[num_part + 1];
-    sub_partition(roi * img.rows, img.rows, num_part, true, coords_part);
-    //[start/end] [left/right] x values of points
-    int s_l, e_l, s_r, e_r;
-    //store temporarily the best x-[start/end]-[left/right]-points
-    int s_l_best = 0, e_l_best = 0, s_r_best = 0, e_r_best = 0;
-    //score of line quality (sum of white pixels along the current line)
-    int score_l = 0, score_r = 0;
-    //store temporarily the best score ->
-    int score_l_best = 0, score_r_best = 0;
-    //variables for line parameter calculation
-    double slope_l, slope_r;
-    double height_inv;
-    double height;
-    //x-coordinates of the current line
-    int x_l_curr, x_r_curr;
-
-	uchar* img_data = img.data;
-	
-	uint8x8_t compare1 = vcreate_u8(0x0101010101010101);
-	uint8x16_t compare = vcombine_u8(compare1, compare1);
-
-
-
-    //for each partition
-    for (int part = 0; part < num_part; ++part)
-    {
-        //height of current partition
-        height = (coords_part[part + 1] - coords_part[part]);
-        height_inv = 1. / height;
-        assert(height_inv >= 0.);
-
-        //create num_lines on both sides and calculate for the current line the quality
-        //(-> move along the line an count white pixels)
-        //if current line for one side is better than the former best, temporarily store the configuration
-        for (int l = 0; l < num_lines;)
-        {
-            s_l = dist_left(generator);
-            e_l = dist_left(generator);
-            s_r = dist_right(generator);
-            e_r = dist_right(generator);
-            if(e_l - s_l > pixel_diff || e_r -s_r < -pixel_diff)
-                continue;
-            ++l;
-#ifndef NDEBUG
-            line(img, Point2f(s_l, coords_part[part]), Point2f(e_l, coords_part[part + 1]), Scalar(128));
-            line(img, Point2f(s_r, coords_part[part]), Point2f(e_r, coords_part[part + 1]), Scalar(128));
-#endif
-            //slope of lines like this: x = slope*y + t
-            slope_l = height_inv * (e_l - s_l);
-            slope_r = height_inv * (e_r - s_r);
-
-            //calc quality scores for both lines
-            for (int y = 0; y < height; ++y)
-            {
-                x_l_curr = y * slope_l + s_l;
-                x_r_curr = y * slope_r + s_r;
-
-                if (x_l_curr-offset_x < 0 || x_l_curr+offset_x > img.cols || x_r_curr-offset_x < 0 || x_r_curr+offset_x > img.cols || x_l_curr > image_split*img.cols || x_r_curr < (1.-image_split)*img.cols)
-                {
-                    //normal distribution might give us points that are outside of the image
-                    //-> skip them
-                    continue;
-                }
-
-			/*		int tmpr = 0;
-					int tmpl = 0;
-                //search for 2*offset_x pixels around the line for white pixels
-                //(only if pixel is in the image [0, img.cols])
-                for (int x_offset = -offset_x; x_offset <= (int)offset_x; ++x_offset)
-                {
-                    if (img.at<uchar>(y + coords_part[part], x_l_curr + x_offset) >= 250)
-                    {
-						++tmpl;
-						++score_l;
-                    }
-					if (img.cols && img.at<uchar>(y + coords_part[part], x_r_curr + x_offset) >= 250)
-                    {    
-						++tmpr;
-						++score_r;
-                	}
-				}
-						
-					std::cout << "normal l: " << tmpl << std::endl;
-				*/
-				//NEON
-				uchar A [16];
-				uchar B [16];
-				uint8x16_t left = vld1q_u8(img_data + ((y+coords_part[part])*img.cols+x_l_curr-offset_x));
-				uint8x16_t right = vld1q_u8(img_data +((y*coords_part[part])*img.cols+x_r_curr-offset_x));
-            	left = vandq_u8(compare, left);
-				right = vandq_u8(compare, right);
-
-				vst1q_u8(A, left);
-				vst1q_u8(B, right);
-				score_l += A[0]+A[1]+A[2]+A[3]+A[4]+A[5]+A[6]+A[7]+A[8]+A[9]+A[10];
-				score_r += B[0]+B[1]+B[2]+B[3]+B[4]+B[5]+B[6]+B[7]+B[8]+B[9]+B[10];
-				//std::cout << "neon l: " <<  vaddvq_u8(left) << std::endl;
-				//std::cout << "neon r: " <<  vaddvq_u8(right) << std::endl;
-			}
-            //store current configuration for both sides
-            //if it is better than the all time best
-            if (score_l > score_l_best)
-            {
-                score_l_best = score_l;
-                s_l_best = s_l;
-                e_l_best = e_l;
-            }
-            if (score_r > score_r_best)
-            {
-                score_r_best = score_r;
-                s_r_best = s_r;
-                e_r_best = e_r;
-            }
-            score_l = 0;
-            score_r = 0;
-        }
-        left_points.push_back(Point2f(s_l_best, coords_part[part]));
-        left_points.push_back(Point2f(e_l_best, coords_part[part + 1]));
-        right_points.push_back(Point2f(s_r_best, coords_part[part]));
-        right_points.push_back(Point2f(e_r_best, coords_part[part + 1]));
-        score_l_best = 0;
-        score_r_best = 0;
-    }
-    if (left_points.size() != num_part * 2u || right_points.size() != num_part * 2u)
-    {
-        std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
-        return LANEDET_WARNING;
-    }
-
-#ifndef NDEBUG
-    show_image("all random", img, true);
-    for (auto p = left_points.begin(); p != left_points.end(); p += 2)
-        line(img, *p, *(p + 1), Scalar(255), 4);
-    for (auto p = right_points.begin(); p != right_points.end(); p += 2)
-        line(img, *p, *(p + 1), Scalar(255), 4);
-    std::cout << "num points after random(): " << left_points.size() << ", right: " << right_points.size() << std::endl;
-    show_image("random finished", img, true);
-#endif
-
-    //Compute and return the mean of the two points for each side with same y-coordinate (on partition boundary)
-    pair_conversion(left_points, right_points);
-
-    return LANEDET_SUCCESS;
-}
 
 int sliding_windows_search(Mat &img, const double roi, const int num_windows, const int width, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
