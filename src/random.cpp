@@ -19,7 +19,6 @@ struct r_line{
 };
 
 
-
 int random_search(Mat &img, const int num_lines, const double roi, const int num_part, const bool b_view, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
     //0% overlap for each half
@@ -52,11 +51,11 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     //store temporarily the best score ->
     int score_l_best = 0, score_r_best = 0;
     //variables for line parameter calculation
-    double slope_l, slope_r;
     double height_inv;
     double height;
-    //x-coordinates of the current line
-    int x_l_curr, x_r_curr;
+
+	left_points.resize(num_part*2);
+	right_points.resize(num_part*2);
 
 	uchar* img_data = img.data;
 
@@ -67,7 +66,6 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     height = (coords_part[1] - coords_part[0]);
     height_inv = 1. / height;
     assert(height_inv >= 0.);
-
 
 	r_line * candidates = new r_line[num_part*num_lines];
 
@@ -96,24 +94,23 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
 
 
     //for each partition
-    for (int part = 0; part < num_part; ++part)
+#pragma omp parallel for private(score_l, score_r, s_l_best, e_l_best, s_r_best, e_r_best) firstprivate(score_l_best, score_r_best) schedule(static, 1) 
+	for (int part = 0; part < num_part; ++part)
     {
-        //create num_lines on both sides and calculate for the current line the quality
+        //num_lines on both sides and calculate for the current line the quality
         //(-> move along the line an count white pixels)
         //if current line for one side is better than the former best, temporarily store the configuration
-        for (int l = 0; l < num_lines; ++l)
+  		for (int l = 0; l < num_lines; ++l)
         {
-
 #ifndef NDEBUG
             line(img, Point2f(candidates[part*num_lines+l].s_l, coords_part[part]), Point2f(candidates[part*num_lines+l].e_l, coords_part[part + 1]), Scalar(128));
             line(img, Point2f(candidates[part*num_lines+l].s_r, coords_part[part]), Point2f(candidates[part*num_lines].e_r, coords_part[part + 1]), Scalar(128));
 #endif
-
             //calc quality scores for both lines
             for (int y = 0; y < height; ++y)
             {
-                x_l_curr = y * candidates[part*num_lines+l].slope_l + candidates[part*num_lines+l].s_l;
-                x_r_curr = y * candidates[part*num_lines+l].slope_r + candidates[part*num_lines+l].s_r;
+                int x_l_curr = y * candidates[part*num_lines+l].slope_l + candidates[part*num_lines+l].s_l;
+                int x_r_curr = y * candidates[part*num_lines+l].slope_r + candidates[part*num_lines+l].s_r;
 
 				uchar A [16];
 				uchar B [16];
@@ -138,7 +135,7 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
             //if it is better than the all time best
             if (score_l > score_l_best)
             {
-                score_l_best = score_l;
+				score_l_best = score_l;
                 s_l_best = candidates[part*num_lines+l].s_l;
                 e_l_best = candidates[part*num_lines+l].e_l;
             }
@@ -151,14 +148,17 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
             score_l = 0;
             score_r = 0;
         }
-        left_points.push_back(Point2f(s_l_best, coords_part[part]));
-        left_points.push_back(Point2f(e_l_best, coords_part[part + 1]));
-        right_points.push_back(Point2f(s_r_best, coords_part[part]));
-        right_points.push_back(Point2f(e_r_best, coords_part[part + 1]));
-        score_l_best = 0;
+		left_points[2*part] = Point2f(s_l_best, coords_part[part]);
+		left_points[2*part+1] = Point2f(e_l_best, coords_part[part+1]);
+		right_points[2*part] = Point2f(s_r_best, coords_part[part]);
+		right_points[2*part+1] = Point2f(e_r_best, coords_part[part+1]);
+
+		score_l_best = 0;
         score_r_best = 0;
     }
-    if (left_points.size() != num_part * 2u || right_points.size() != num_part * 2u)
+    
+	
+	if (left_points.size() != num_part * 2u || right_points.size() != num_part * 2u)
     {
         delete[] candidates;
 		std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
