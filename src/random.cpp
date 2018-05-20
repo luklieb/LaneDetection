@@ -115,28 +115,6 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
                 x_l_curr = y * candidates[part*num_lines+l].slope_l + candidates[part*num_lines+l].s_l;
                 x_r_curr = y * candidates[part*num_lines+l].slope_r + candidates[part*num_lines+l].s_r;
 
-				/*int tmpr = 0;
-				int tmpl = 0;
-                //search for 2*offset_x pixels around the line for white pixels
-                //(only if pixel is in the image [0, img.cols])
-                for (int x_offset = -offset_x; x_offset <= (int)offset_x; ++x_offset)
-                {
-                    if (img.at<uchar>(y + coords_part[part], x_l_curr + x_offset) >= 250)
-                    {
-						++tmpl;
-						++score_l;
-                    }
-					if (img.at<uchar>(y + coords_part[part], x_r_curr + x_offset) >= 250)
-                    {    
-						++tmpr;
-						++score_r;
-                	}
-				}
-				*/
-				//std::cout << "normal l: " << tmpl << std::endl;
-
-				
- 				//NEON
 				uchar A [16];
 				uchar B [16];
 				uint8x16_t left = vld1q_u8(img_data + ((y+coords_part[part])*img.cols+x_l_curr-offset_x));
@@ -152,10 +130,6 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
 				score_l += tmp1;
 				score_r += tmp2;
 
-				//if(tmp1 != tmpl)
-				//	std::cout << "left not equal, neon: " << tmp1 << ", regular: " << tmpl << std::endl;
-				//if(tmp2 != tmpr)
-				//	std::cout << "right not equal, neon: " << tmp2 << ", regular: " << tmpr << std::endl;
 				//std::cout << "neon l: " <<  vaddvq_u8(left) << std::endl;
 				//std::cout << "neon r: " <<  vaddvq_u8(right) << std::endl;
 				
