@@ -6,7 +6,7 @@ w_width -1
 r_num_lines 800
 b_view 0
 filter1 0
-filter2 0
+filter2 1
 filter3 0
 filter4 1
 order 3

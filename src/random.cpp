@@ -26,9 +26,9 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     //range to search around current line for white pixels
     const int offset_x = 5;
     //standard deviation for normal distribution
-    const double sigma = 70.;
+    const double sigma = 38.;
     //mean for left side distribution (closer to middle of picture)
-    const double m_l = 0.75 * img.cols * 0.55;
+    const double m_l = 0.44 * img.cols;
     //mean for right side distribution (closer to middle of picture)
     const double m_r = img.cols - m_l - 1.;
     //maximum amount of pixels, that e_l-s_l respectively -(e_r-s_r) can differ
@@ -36,10 +36,7 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     //-> most of left lines are right leaning, most of right lines are left leaning (same as road lanes)
     const int pixel_diff = 50;
 
-    std::default_random_engine generator;
-    std::normal_distribution<double> dist_left(m_l, sigma);
-    std::normal_distribution<double> dist_right(m_r, sigma);
-    //coordinates of partition borders
+   //coordinates of partition borders
     int coords_part[num_part + 1];
     sub_partition(roi * img.rows, img.rows, num_part, true, coords_part);
     //[start/end] [left/right] x values of points
@@ -70,7 +67,11 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
 	r_line * candidates = new r_line[num_part*num_lines];
 
 	for (int part = 0; part < num_part; ++part)
-	{
+	{    
+		std::default_random_engine generator;
+    	std::normal_distribution<double> dist_left(m_l-part*0.04*img.cols, sigma);
+    	std::normal_distribution<double> dist_right(m_r+part*0.022*img.cols, sigma);
+ 
 		for (int l = 0; l < num_lines;)
 		{
 			s_l = dist_left(generator);
