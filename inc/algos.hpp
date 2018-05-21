@@ -7,8 +7,8 @@
 #include <string>
 #include <random>
 #include <iomanip>
-#include <arm_neon.h>
-#include <omp.h>
+//#include <arm_neon.h>
+//#include <omp.h>
 #include "codes.hpp"
 #include "helper.hpp"
 

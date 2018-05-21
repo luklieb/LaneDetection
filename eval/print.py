@@ -178,6 +178,52 @@ def getBestFiguresPerAlgo(ranges, num):
         figures.append(mean.values.tolist())
     return figures, bestPar, worstPar
 
+
+def getBestFiguresForRandom(ranges, num):
+    bird = []
+    nonBird = []
+    #bestParB = []
+    #bestParNB = []
+    algoRange = ranges[4]
+    dictData = {}
+    dictParam = {}
+    # Iterate over the range of one specifc algorithm
+    for curr in algoRange:
+        # Read in the "dataxxx" file as a Panda DataFrame object
+        # IF B_view on or off
+        singleData = pd.read_csv(os.path.join(resultsDirName, "data" + str(curr)), sep=" ", usecols=[0, 1, 2, 3, 4, 5, 6], skiprows=[12])
+        paramData = (pd.read_csv(os.path.join(paramDirName, "param_"+str(curr)+".par"), sep=" ", header=None, index_col=0))
+        #Add DataFrame to a dictionary with the current parameter-file-number curr
+        dictParam[curr] = paramData
+        dictData[curr] = singleData
+    # Concatenate multiple DataFrames to a multiindex DataFrame
+    data = pd.concat(dictData)
+    # Compute first mean of the 11 entries of each DataFrame/dataxxx file
+    data = data.groupby(level=[0]).mean()
+    # Transpose parameter file, remove unneseccary top level
+    param = pd.concat(dictParam).unstack(level=[0])
+    param.columns = param.columns.droplevel(None)
+    # Append values from parameterfile
+    final = pd.concat([data, param], axis=1)
+    # Sort the Dataframe descending according to its values in column "#MaxF"
+    final.sort_values('#MaxF', inplace=True, ascending=False)
+    # Store num best/worst rows of mean figures according to the "#MaxF" value
+    meanPerParBestB = (final[final.b_view == 1]).head(num)
+    meanPerParBestNB = (final[final.b_view == 0]).head(num)
+    # Store the index values (parameter-file-number) for best/worst mean figures
+    # Used later to manually look at the best/worst parameter files
+    print(meanPerParBestB)
+    print(meanPerParBestB.index.values)
+    bestParNB = sorted(meanPerParBestNB.index.values)
+    bestParB = sorted(meanPerParBestB.index.values)
+    # Compute second mean in order to get one single row of mean figures per algorithm
+    bestNB = (final[final.b_view == 0]).head(num).mean()
+    bestB = (final[final.b_view == 1]).head(num).mean()
+    nonBird.append(bestNB.values.tolist()[0])
+    bird.append(bestB.values.tolist()[0])
+    return nonBird, bird, bestParNB, bestParB
+
+
 # Computes the averages for each of the 7 figures for the 5 algorithms
 # ranges: list of range-objects, one for each algorithm
 # Returns a nested list with 5 lists of averaged figures [5*[MaxF, AvgPrec, PRE, REC, TPR, FPR, FNR]]
@@ -392,7 +438,7 @@ def plotRatios(ratios):
 # Plots the time measuremnts from fct calls like:
 # getTimePerAlgo()
 # times: list of 5 tuples [5*([(0,avgTime)], [(paramNumber, fastestTimes)*num], [(paramNumber, slowestTimes)*num])]
-def plotTimes(times):
+def plotTimes(times, title):
     x = np.arange(3)  # 3 different time types (fastest, mean, slowest)
     # Iterate over the 5 algorithms
     for ind, t in enumerate(times):
@@ -411,7 +457,7 @@ def plotTimes(times):
     plt.ylabel("sec")
     plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
     #plt.gca().set_ylim(0.3)
-    plt.suptitle("Execution time in sec")
+    plt.suptitle(title)
     plt.show()
 
 
@@ -485,11 +531,16 @@ def main():
     print(algoComb)
     print(ranges)
 
+    nb, b, nbp, bp = getBestFiguresForRandom(ranges, 20)
+    
+    print(nb, b, nbp, bp)
+    
+    #ranges = [ranges[-1]]
     getNumFiles(ranges)
     print(ranges)
     times = getTimePerAlgo(ranges)
     print(times)
-    plotTimes(times)
+    plotTimes(times, "Average Time per Algo")
     ratios = getRatioExitCodesPerAlgo(ranges)
     plotRatios(ratios)
     print(ratios)
@@ -505,6 +556,9 @@ def main():
     print(best)
     print(worst)
     plotAverageFigures(fig, "Average Figures For {} Best Configurations".format(n))
+
+    bestTimes = getTimePerAlgo(best)
+    plotTimes(bestTimes, "Times of best configurations")
 
     figure = getBestFiltersPerAlgo(ranges)
     plotBestFilter(figure)

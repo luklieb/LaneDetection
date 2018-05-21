@@ -22,7 +22,7 @@ struct r_line{
 int random_search(Mat &img, const int num_lines, const double roi, const int num_part, const bool b_view, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
     //0% overlap for each half
-    const double image_split = 0.55;
+    const double image_split = 0.5;
     //range to search around current line for white pixels
     const int offset_x = 5;
     //standard deviation for normal distribution
@@ -31,27 +31,31 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     double m_l;
  	//mean for right side distribution (closer to middle of picture)
     double m_r;
-    if(b_view)
+    
+	//maximum amount of pixels, that e_l-s_l respectively -(e_r-s_r) can differ
+    //this excludes lines with wrong slope
+    //-> most of left lines are right leaning, most of right lines are left leaning (same as road lanes)
+    int pixel_diff;
+	
+	if(b_view)
 	{
 		sigma = 70;
 		m_l = 0.55*img.cols*0.75;
 		m_r = img.cols - m_l -1;
+		pixel_diff = 50;
 	}
 	else
 	{
-		sigma = 38.;
-		m_l = 0.44 * img.cols;
+		sigma = 100;
+		m_l = 0.4 * img.cols;
 		m_r = img.cols - m_l -1;
+		pixel_diff = 100;
 	}
 	
 	std::default_random_engine generator;
 	std::normal_distribution<double> dist_left;
 	std::normal_distribution<double> dist_right;
 	
-	//maximum amount of pixels, that e_l-s_l respectively -(e_r-s_r) can differ
-    //this excludes lines with wrong slope
-    //-> most of left lines are right leaning, most of right lines are left leaning (same as road lanes)
-    const int pixel_diff = 50;
 
    //coordinates of partition borders
     int coords_part[num_part + 1];
@@ -73,8 +77,8 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
 
 	uchar* img_data = img.data;
 
-	uint8x8_t compare1 = vcreate_u8(0x0101010101010101);
-	uint8x16_t compare = vcombine_u8(compare1, compare1);
+//	uint8x8_t compare1 = vcreate_u8(0x0101010101010101);
+//	uint8x16_t compare = vcombine_u8(compare1, compare1);
 
     //height of current partition
     height = (coords_part[1] - coords_part[0]);
@@ -92,8 +96,8 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
 		}
 		else
 		{
-    		dist_left = std::normal_distribution<double>(m_l-part*0.04*img.cols, sigma);
-    		dist_right = std::normal_distribution<double>(m_r+part*0.022*img.cols, sigma);
+    		dist_left = std::normal_distribution<double>(m_l-part*0.1*img.cols, sigma);
+    		dist_right = std::normal_distribution<double>(m_r+part*0.04*img.cols, sigma);
  		}
 		for (int l = 0; l < num_lines;)
 		{
