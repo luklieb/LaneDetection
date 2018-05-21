@@ -26,12 +26,29 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     //range to search around current line for white pixels
     const int offset_x = 5;
     //standard deviation for normal distribution
-    const double sigma = 38.;
+    double sigma;
     //mean for left side distribution (closer to middle of picture)
-    const double m_l = 0.44 * img.cols;
-    //mean for right side distribution (closer to middle of picture)
-    const double m_r = img.cols - m_l - 1.;
-    //maximum amount of pixels, that e_l-s_l respectively -(e_r-s_r) can differ
+    double m_l;
+ 	//mean for right side distribution (closer to middle of picture)
+    double m_r;
+    if(b_view)
+	{
+		sigma = 70;
+		m_l = 0.55*img.cols*0.75;
+		m_r = img.cols - m_l -1;
+	}
+	else
+	{
+		sigma = 38.;
+		m_l = 0.44 * img.cols;
+		m_r = img.cols - m_l -1;
+	}
+	
+	std::default_random_engine generator;
+	std::normal_distribution<double> dist_left;
+	std::normal_distribution<double> dist_right;
+	
+	//maximum amount of pixels, that e_l-s_l respectively -(e_r-s_r) can differ
     //this excludes lines with wrong slope
     //-> most of left lines are right leaning, most of right lines are left leaning (same as road lanes)
     const int pixel_diff = 50;
@@ -68,17 +85,23 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
 
 	for (int part = 0; part < num_part; ++part)
 	{    
-		std::default_random_engine generator;
-    	std::normal_distribution<double> dist_left(m_l-part*0.04*img.cols, sigma);
-    	std::normal_distribution<double> dist_right(m_r+part*0.022*img.cols, sigma);
- 
+		if(b_view)
+		{
+			dist_left = std::normal_distribution<double>(m_l, sigma);
+			dist_right = std::normal_distribution<double>(m_r, sigma);
+		}
+		else
+		{
+    		dist_left = std::normal_distribution<double>(m_l-part*0.04*img.cols, sigma);
+    		dist_right = std::normal_distribution<double>(m_r+part*0.022*img.cols, sigma);
+ 		}
 		for (int l = 0; l < num_lines;)
 		{
 			s_l = dist_left(generator);
             e_l = dist_left(generator);
             s_r = dist_right(generator);
             e_r = dist_right(generator);
-            if(abs(e_l - s_l) > pixel_diff || abs(e_r -s_r) > pixel_diff || (part!=0 && e_l > s_l)||  (part!=0 && e_r < s_r) ||s_l-offset_x < 0 || e_l-offset_x < 0 || s_r-offset_x < 0 || e_r-offset_x < 0 || s_l+offset_x > img.cols || e_l+offset_x > img.cols || s_r+offset_x > img.cols || e_r+offset_x > img.cols || s_l > image_split*img.cols || e_l > image_split*img.cols || s_r < (1.-image_split)*img.cols || e_r < (1.-image_split)*img.cols)
+            if((b_view && (e_l-s_l > pixel_diff)) || (b_view &&(e_r - s_r < -pixel_diff)) || (!b_view && (abs(e_l - s_l) > pixel_diff)) || (!b_view && (abs(e_r -s_r) > pixel_diff)) || (!b_view && part!=0 && e_l > s_l) || (!b_view && part!=0 && e_r < s_r) ||s_l-offset_x < 0 || e_l-offset_x < 0 || s_r-offset_x < 0 || e_r-offset_x < 0 || s_l+offset_x > img.cols || e_l+offset_x > img.cols || s_r+offset_x > img.cols || e_r+offset_x > img.cols || s_l > image_split*img.cols || e_l > image_split*img.cols || s_r < (1.-image_split)*img.cols || e_r < (1.-image_split)*img.cols)
                 continue;
 			candidates[part*num_lines+l].s_l = s_l;
 			candidates[part*num_lines+l].e_l = e_l;

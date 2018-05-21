@@ -33,8 +33,17 @@ def getParameterFiles(path):
     return [f for f in sorted(os.listdir(path)) if f.endswith(".par")]
     #paths = sorted(glob(os.path.join(path, "param_[336,337,338,339,34,35,36,37,38,39,4,5,6,7,8,9]*.par")))
     #return [os.path.basename(f) for f in paths]
-# Matches numbers between a '_' and '.par' (i.e. "file_123.par" matches to and returns "123")
+# M(tches numbers between a '_' and '.par' (i.e. "file_123.par" matches to and returns "123")
 
+
+#2520 - 3479 for random lines
+def getParameterFiles(path, start, end):
+    params = []
+    for f in sorted(os.listdir(path)):
+        num = (re.search(r"\d+", f)).group()
+        if start <= int(num) <= end:
+            params.append(f)
+    return params
 
 def getSuffix(name):
     try:
@@ -148,7 +157,7 @@ if __name__ == '__main__':
     # Get a list with the names of all pngs used to detect lanes in
     inputPngs = getPngs(inputDirName)
     # Get a list with all parameter file names
-    paramFiles = getParameterFiles(paramDirName)
+    paramFiles = getParameterFiles(paramDirName, 2520, 3479)
     for pf in paramFiles:
         print("#################### eval: current paramFile {} #######################".format(pf))
         suffix = getSuffix(pf)
