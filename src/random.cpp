@@ -22,7 +22,7 @@ struct r_line{
 int random_search(Mat &img, const int num_lines, const double roi, const int num_part, const bool b_view, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
 {
     //0% overlap for each half
-    const double image_split = 0.5;
+    const double image_split = 0.55;
     //range to search around current line for white pixels
     const int offset_x = 5;
     //standard deviation for normal distribution
@@ -77,7 +77,7 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
             e_l = dist_left(generator);
             s_r = dist_right(generator);
             e_r = dist_right(generator);
-            if(e_l - s_l > pixel_diff || e_r -s_r < -pixel_diff || s_l-offset_x < 0 || e_l-offset_x < 0 || s_r-offset_x < 0 || e_r-offset_x < 0 || s_l+offset_x > img.cols || e_l+offset_x > img.cols || s_r+offset_x > img.cols || e_r+offset_x > img.cols)
+            if(abs(e_l - s_l) > pixel_diff || abs(e_r -s_r) > pixel_diff || (part!=0 && e_l > s_l)||  (part!=0 && e_r < s_r) ||s_l-offset_x < 0 || e_l-offset_x < 0 || s_r-offset_x < 0 || e_r-offset_x < 0 || s_l+offset_x > img.cols || e_l+offset_x > img.cols || s_r+offset_x > img.cols || e_r+offset_x > img.cols || s_l > image_split*img.cols || e_l > image_split*img.cols || s_r < (1.-image_split)*img.cols || e_r < (1.-image_split)*img.cols)
                 continue;
 			candidates[part*num_lines+l].s_l = s_l;
 			candidates[part*num_lines+l].e_l = e_l;
@@ -94,7 +94,6 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
 
 
     //for each partition
-#pragma omp parallel for private(score_l, score_r, s_l_best, e_l_best, s_r_best, e_r_best) firstprivate(score_l_best, score_r_best) schedule(static, 1) 
 	for (int part = 0; part < num_part; ++part)
     {
         //num_lines on both sides and calculate for the current line the quality
@@ -104,7 +103,7 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
         {
 #ifndef NDEBUG
             line(img, Point2f(candidates[part*num_lines+l].s_l, coords_part[part]), Point2f(candidates[part*num_lines+l].e_l, coords_part[part + 1]), Scalar(128));
-            line(img, Point2f(candidates[part*num_lines+l].s_r, coords_part[part]), Point2f(candidates[part*num_lines].e_r, coords_part[part + 1]), Scalar(128));
+            line(img, Point2f(candidates[part*num_lines+l].s_r, coords_part[part]), Point2f(candidates[part*num_lines+l].e_r, coords_part[part + 1]), Scalar(128));
 #endif
             //calc quality scores for both lines
             for (int y = 0; y < height; ++y)
@@ -112,24 +111,20 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
                 int x_l_curr = y * candidates[part*num_lines+l].slope_l + candidates[part*num_lines+l].s_l;
                 int x_r_curr = y * candidates[part*num_lines+l].slope_r + candidates[part*num_lines+l].s_r;
 
-				uchar A [16];
-				uchar B [16];
-				uint8x16_t left = vld1q_u8(img_data + ((y+coords_part[part])*img.cols+x_l_curr-offset_x));
-				uint8x16_t right = vld1q_u8(img_data +((y+coords_part[part])*img.cols+x_r_curr-offset_x));
-            	left = vandq_u8(compare, left);
-				right = vandq_u8(compare, right);
 
-				vst1q_u8(A, left);
-				vst1q_u8(B, right);
-				int tmp1 = A[0]+A[1]+A[2]+A[3]+A[4]+A[5]+A[6]+A[7]+A[8]+A[9]+A[10];
-				int tmp2 = B[0]+B[1]+B[2]+B[3]+B[4]+B[5]+B[6]+B[7]+B[8]+B[9]+B[10];
+                for (int x_offset = -offset_x; x_offset <= (int)offset_x; ++x_offset)
+                {
+                    if (img.at<uchar>(y + coords_part[part], x_l_curr + x_offset) >= 250)
+                    {
+						++score_l;
+                    }
+					if (img.at<uchar>(y + coords_part[part], x_r_curr + x_offset) >= 250)
+                    {    
+						++score_r;
+                	}
+				}
 
-				score_l += tmp1;
-				score_r += tmp2;
-
-				//std::cout << "neon l: " <<  vaddvq_u8(left) << std::endl;
-				//std::cout << "neon r: " <<  vaddvq_u8(right) << std::endl;
-				
+			
 			}
             //store current configuration for both sides
             //if it is better than the all time best

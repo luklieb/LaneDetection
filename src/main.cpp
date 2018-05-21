@@ -114,7 +114,7 @@ int main(int argc, char **argv)
 
     //Random search constants
     const int R_NUM_LINES = parameter.get_value<int>("r_num_lines"); //200, 400, 600, 800 for algo 5
-    const std::vector<int> allowed_r_num_lines = {200, 400, 600, 800, 8000};
+    const std::vector<int> allowed_r_num_lines = {10,20,200, 400, 600, 800, 8000};
 
     //Birdview Constants manually set once
     //use b_view_calibration() once to get initial values for the 4 parameters for the used camera setup
