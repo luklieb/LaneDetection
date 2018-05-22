@@ -179,11 +179,59 @@ def getBestFiguresPerAlgo(ranges, num):
     return figures, bestPar, worstPar
 
 
+def getTimesForRandom(ranges, num):
+    algoRange = ranges[4]
+    dictParam = {}
+    dictData = {}
+    times = []
+    # Iterate over the range of one specifc algorithm
+    for curr in algoRange:
+        try:
+            with open(os.path.join(resultsDirName, "time" + str(curr))) as f:
+                sumTimes = 0.
+                count = 0
+                # Compute mean of times for each image
+                for line in f:
+                    sumTimes += float(line)
+                    count += 1
+                # Save mean time for parameter file curr
+                times.append((curr, sumTimes/count))
+        except IOError:
+            print("{} doesn't exists as a time file - no worries, it's \
+            probably because the algorithm created only warnings".format(str(curr)))
+        # Read in the "dataxxx" file as a Panda DataFrame object
+        # IF B_view on or off
+        singleData = pd.read_csv(os.path.join(resultsDirName, "data" + str(curr)), sep=" ", usecols=[0, 1, 2, 3, 4, 5, 6], skiprows=[12])
+        paramData = (pd.read_csv(os.path.join(paramDirName, "param_"+str(curr)+".par"), sep=" ", header=None, index_col=0))
+        #Add DataFrame to a dictionary with the current parameter-file-number curr
+        dictParam[curr] = paramData
+        dictData[curr] = singleData
+    data = pd.concat(dictData)
+    data = data.groupby(level=[0]).mean()
+    # Transpose parameter file, remove unneseccary top level
+    param = pd.concat(dictParam).unstack(level=[0])
+    param.columns = param.columns.droplevel(None)
+    # Append values from parameterfile
+    param = pd.concat([data, param], axis=1)
+    for t in times:
+        param.at[t[0], "time"] = t[1]
+    
+    # Sort the Dataframe descending according to its values in column "#MaxF"
+    param.sort_values('#MaxF', inplace=True, ascending=False)
+    # Store num best/worst rows of mean figures according to the "#MaxF" value
+    bird = (param[param.b_view == 1]).head(num)
+    nonBird = (param[param.b_view == 0]).head(num)
+    bird.sort_values('time', inplace=True, ascending=True)
+    nonBird.sort_values('time', inplace=True, ascending=True)
+    birdmean = bird.mean()["time"]
+    birdslow = bird.tail(1)["time"].values[0]
+    birdfast = bird.head(1)["time"].values[0]
+    nonBirdmean = nonBird.mean().values.tolist()[-1]
+    nonBirdslow = nonBird.tail(1).values.tolist()[0][-1]
+    nonBirdfast = nonBird.head(1).values.tolist()[0][-1]
+    return (birdslow, birdmean, birdfast), (nonBirdslow, nonBirdmean, nonBirdfast)
+
 def getBestFiguresForRandom(ranges, num):
-    bird = []
-    nonBird = []
-    #bestParB = []
-    #bestParNB = []
     algoRange = ranges[4]
     dictData = {}
     dictParam = {}
@@ -212,15 +260,13 @@ def getBestFiguresForRandom(ranges, num):
     meanPerParBestNB = (final[final.b_view == 0]).head(num)
     # Store the index values (parameter-file-number) for best/worst mean figures
     # Used later to manually look at the best/worst parameter files
-    print(meanPerParBestB)
-    print(meanPerParBestB.index.values)
     bestParNB = sorted(meanPerParBestNB.index.values)
     bestParB = sorted(meanPerParBestB.index.values)
     # Compute second mean in order to get one single row of mean figures per algorithm
     bestNB = (final[final.b_view == 0]).head(num).mean()
     bestB = (final[final.b_view == 1]).head(num).mean()
-    nonBird.append(bestNB.values.tolist()[0])
-    bird.append(bestB.values.tolist()[0])
+    nonBird = bestNB.values.tolist()[0]
+    bird = bestB.values.tolist()[0]
     return nonBird, bird, bestParNB, bestParB
 
 
@@ -460,7 +506,7 @@ def plotTimes(times, title):
     plt.suptitle(title)
     plt.show()
 
-
+#[ [(b_view, [averaged MaxF], [param-file-number])*2]*5 ]
 # Plots the return value from fct getBestBirdView()
 def plotBirdView(figures):
     x = np.arange(2)  # b_view on or off
@@ -517,6 +563,30 @@ def plotProfiling():
     plt.suptitle("Profiling Of Algorithms + Bird View + Filters")
     plt.show()
 
+def plotRandom (data, xlabels, ylabel, ylim, title):
+    if ylim == None:
+        ylim = [min(data)*0.9, max(data)*1.1]
+    x = np.arange(len(data))/4
+    for d in data:
+        plt.bar(x, d, color="tab:purple", width=0.15)
+    plt.xticks(x, xlabels)
+    plt.ylabel(ylabel)
+    plt.gca().set_ylim(ylim)
+    plt.suptitle(title)
+    plt.show()
+
+def plotRandomTimes (data, xlabels, ylabel, ylim, title):
+    if ylim == None:
+        ylim = [min(data)*0.9, max(data)*1.1]
+    x = np.arange(len(data))/4
+    for d in data:
+        plt.bar(x, d, color="tab:purple", width=0.15)
+    plt.xticks(x, xlabels)
+    plt.ylabel(ylabel)
+    plt.gca().set_ylim(ylim)
+    plt.suptitle(title)
+    plt.show()
+
 def main():
     # Number of combinations per algorithm
     algoComb = [240, 960, 1200, 120, 960]
@@ -531,10 +601,15 @@ def main():
     print(algoComb)
     print(ranges)
 
-    nb, b, nbp, bp = getBestFiguresForRandom(ranges, 20)
-    
-    print(nb, b, nbp, bp)
-    
+    bird, nonbird = getTimesForRandom(ranges,20)
+    print("times b on: ", bird, ", times b off: ", nonbird )
+    #TODO add tuple (slow, mean, fast) of no line generation (and of neon+parallel version)
+
+    nb, b, nbp, bp = getBestFiguresForRandom(ranges, 20)    
+    print("best configs b view off: ", nbp, "best configs b view on: ", bp)
+    plotRandom([nb,b], ("Bird View off", "Bird View on"), "F-measure", None, "Top 1 percentile")
+    #TODO same as getBestBirdView() ?
+
     #ranges = [ranges[-1]]
     getNumFiles(ranges)
     print(ranges)
