@@ -155,7 +155,7 @@ def getBestFiguresPerAlgo(ranges, num2):
     # Iterate over the 5 ranges
     for algoRange in ranges:
         if num2 == None:
-            num = int(round(len(algoRange)*0.01,1))*3
+            num = int(round(len(algoRange)*0.10,1))
         else:
             num = num2
         print("percentile: ", num)
@@ -181,7 +181,10 @@ def getBestFiguresPerAlgo(ranges, num2):
         worstPar.append(sorted(meanPerParWorst.index.values.tolist()))
         # Compute second mean in order to get one single row of mean figures per algorithm
         mean = meanPerParBest.mean()
+        #print(meanPerParBest.tail(1).values.tolist()[0])
+        #print(mean.values.tolist())
         figures.append(mean.values.tolist())
+        #figures.append(meanPerParBest.tail(1).values.tolist()[0])
     return figures, bestPar, worstPar
 
 
@@ -192,7 +195,7 @@ def getTimesForRandom(ranges, num2):
     times = []
     num = 0
     if num2 == None:
-        num = int(round(len(algoRange)*0.01,1))*3
+        num = int(round(len(algoRange)*0.10,1))
     else:
         num = num2
     print("percentile: ", num)
@@ -227,7 +230,6 @@ def getTimesForRandom(ranges, num2):
     param = pd.concat([data, param], axis=1)
     for t in times:
         param.at[t[0], "time"] = t[1]
-    
     # Sort the Dataframe descending according to its values in column "#MaxF"
     param.sort_values('#MaxF', inplace=True, ascending=False)
     # Store num best/worst rows of mean figures according to the "#MaxF" value
@@ -248,7 +250,7 @@ def getBestFiguresForRandom(ranges, num2):
     dictData = {}
     dictParam = {}
     if num2 == None:
-        num = int(round(len(algoRange)*0.01,1))*3
+        num = int(round(len(algoRange)*0.10,1))
     else:
         num = num2
     print("percentile: ", num)
@@ -456,13 +458,13 @@ def getBestOrder(ranges):
 # figure: should be list of 5 (=number algorithms) lists with each 7 (=number of figures) values
 # title: title to add to the plot
 def plotAverageFigures(figure, title):
-    x = np.arange(3)  # 7figures
+    x = np.arange(5)  # 7figures
     for ind, f in enumerate(figure):
-        plt.bar(x+(-2+ind)*0.1, [f[0],f[2],f[3]], width=0.1)
+        plt.bar(x+(-2+ind)*0.1, [f[0],f[2],f[3],f[5],f[6]], width=0.1)
     #plt.xticks(x, ("MaxF", "AvgPrec", "PRE", "REC", "TPR", "FPR", "FNR"))
-    plt.xticks(x, ("F-measure", "Precision", "Recall"))
+    plt.xticks(x, ("F-measure", "Precision", "Recall", "FPR", "FNR"))
     plt.legend(("Part. Hough", "ALM", "Sliding Windows",
-                "Fixed Windows", "Random"))
+                "Fixed Windows", "Random Lines"))
     plt.ylabel("[%]")
     plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
     #plt.suptitle(title)
@@ -476,7 +478,7 @@ def plotBestFilter(figure):
         plt.bar(x+(-2+ind)*0.1, [x[1][0] for x in f], width=0.1)
     plt.xticks(x, ("1", "2", "3", "4", "1,2", "1,3", "1,4", "2,3", "2,4", "3,4", "1,2,3", "2,3,4", "1,3,4", "1,2,4", "1,2,3,4"))
     plt.legend(("Part. Hough", "ALM", "Sliding Windows",
-                "Fixed Windows", "Random"), loc='upper center', ncol=2, fancybox=True, bbox_to_anchor=(0.5, 1.1))
+                "Fixed Windows", "Random Lines"), loc='upper center', ncol=2, fancybox=True, bbox_to_anchor=(0.5, 1.1))
     plt.ylabel("F-measure [%]")
     #plt.xlabel("Filter Combinations")
     plt.gca().set_ylim(40)
@@ -494,7 +496,7 @@ def plotRatios(ratios):
         # Plot bar give each bar an offset of 0.1
         plt.bar(x+(-2+ind)*0.1, r, width=0.1)
     plt.xticks(x, ("Success", "Warning", "Error"))
-    plt.legend(("Part. Hough", "ALM", "Sliding Windows", "Fixed Windows", "Random"))
+    plt.legend(("Part. Hough", "ALM", "Sliding Windows", "Fixed Windows", "Random Lines"))
     plt.ylabel("[%]")
     #plt.suptitle("Exit Codes - 'Robustness'")
     plt.show()
@@ -509,14 +511,14 @@ def plotTimes(times, title):
         # From each of the 5 tuples generate a new list [fastest, mean, slowest]
         # Plot a bar plot
         plt.bar(x+(-2+ind)*0.1, [t[1][0][1], t[0][0][1], t[2][0][1]], width=0.1)
-    plt.legend(("Part. Hough", "ALM", "Sliding Windows","Fixed Windows", "Random"))
+    plt.legend(("Part. Hough", "ALM", "Sliding Windows","Fixed Windows", "Random Lines"))
     plt.xticks(x, ("Fastest", "Mean", "Slowest"))
     '''
     # "Inverted": also change x = np.arange(5)
     for i, ind in enumerate([1,0,2]):
         plt.bar(x+(-1+i)*0.2, [times[x][ind][0][1] for x in range(5)], width=0.2)
     plt.legend(("Fastest", "Mean", "Slowest"))
-    plt.xticks(x, ("Part. Hough", "ALM", "Sliding Windows","Fixed Windows", "Random"))
+    plt.xticks(x, ("Part. Hough", "ALM", "Sliding Windows","Fixed Windows", "Random Lines"))
     '''
     plt.ylabel("Time per frame [sec]")
     plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
@@ -532,7 +534,7 @@ def plotBirdView(figures):
         plt.bar(x+(-2+ind)*0.1, [x[1][0] for x in f], width=0.1)
     plt.xticks(x, ("Bird View off", "Bird View on"))
     plt.legend(("Part. Hough", "ALM", "Sliding Windows",
-                "Fixed Windows", "Random"))
+                "Fixed Windows", "Random Lines"))
     plt.ylabel("F-measure [%]")
     plt.gca().set_ylim(40)
     plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
@@ -545,7 +547,7 @@ def plotOrder(figures):
     for ind, f in enumerate(figures):
         plt.bar(x+(-2+ind)*0.1, [x[1][0] for x in f], width=0.1)
     plt.xticks(x, ("2", "3"))
-    plt.legend(("Part. Hough", "ALM", "Sliding Windows", "Fixed Windows", "Random"))
+    plt.legend(("Part. Hough", "ALM", "Sliding Windows", "Fixed Windows", "Random Lines"))
     plt.ylabel("F-measure [%]")
     #plt.xlabel("Order of Polynomial")
     plt.gca().set_ylim(40)
@@ -574,7 +576,7 @@ def plotProfiling():
     plt.xticks(x, ("Fastest", "Slowest", "Bird_View", "Canny",
                    "Sobel_Mag", "Row", "Color_Thres", "Filter Overhead"))
     plt.legend(("Part. Hough", "ALM", "Sliding Windows",
-                "Fixed Windows", "Random"))
+                "Fixed Windows", "Random Lines"))
     plt.ylabel("Time [ms]")
     plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
     plt.suptitle("Profiling Of Algorithms + Bird View + Filters")
@@ -597,8 +599,9 @@ def plotRandom (data, xlabels, ylabel, ylim, title):
 # Plots the return value from fct getBestBirdView()
 def plotRandomTime(figures):
     x = np.arange(3)
+    colors = ["tab:brown", "tab:pink", "tab:gray"]
     for ind in range(0, 3):
-        plt.bar(x+(-2+ind)*0.1, [x[ind] for x in figures], width=0.1)
+        plt.bar(x+(-1+ind)*0.1, [x[ind] for x in figures], width=0.1, color=colors[ind])
     plt.xticks(x, ("Bird View on", "Bird View off", "Bird View off + \n no line generation"))
     plt.legend(("Slowest", "Average", "Fastest"))
     plt.ylabel("Time per frame [sec]")
@@ -627,14 +630,14 @@ def main():
     '''
     nb, b, nbp, bp = getBestFiguresForRandom(ranges, None)    
     print("best configs b view off: ", nbp, "best configs b view on: ", bp)
-    plotRandom([[nb,b]], ("Bird View off", "Bird View on"), "F-measure [%]", [80,90], "Top 1 percentile")
+    plotRandom([[nb,b]], ("Bird View off", "Bird View on"), "F-measure [%]", [80,85], "Top 1 percentile")
 
     figure = getBestBirdView(ranges)
     plotBirdView(figure)
-    
+    '''
     bird, nonbird = getTimesForRandom(ranges, None)
     print("times b on: ", bird, ", times b off: ", nonbird )
-    noLineGen = (0.06, 0.05, 0.04)
+    noLineGen = (0.01, 0.01, 0.01)
     plotRandomTime((bird, nonbird, noLineGen))
     #TODO add manually tuple (slow, mean, fast) of no line generation (and of neon+parallel version)
 
@@ -646,14 +649,14 @@ def main():
     #ratios = getRatioExitCodesPerAlgo(ranges)
     #plotRatios(ratios)
     #print(ratios)
-    '''  
+      
     figure = getAverageFiguresPerAlgo(ranges)
     plotAverageFigures(figure, "Average Figures For All Images")
 
     #figure = getAverageFiguresPerAlgoForImage(ranges, 6)
     #plotAverageFigures(figure, "Average Figures For Image 6")
     
-    fig, best, worst = getBestFiguresPerAlgo(ranges, 20)
+    fig, best, worst = getBestFiguresPerAlgo(ranges, None)
     print(best)
     print(worst)
     plotAverageFigures(fig, "Average Figures For 1st percentile Best Configurations")
