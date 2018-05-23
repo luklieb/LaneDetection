@@ -26,24 +26,26 @@ using namespace cv;
 
 class Timer
 {
-  private:
-    typedef std::chrono::high_resolution_clock Clock_T;
+  	private:
+    	typedef std::chrono::high_resolution_clock Clock_T;
 
-  public:
-    Timer() : start_(Clock_T::now()) {}
+  	public:
+    	Timer() : start_(Clock_T::now()) {}
 
-    void reset() { start_ = Clock_T::now(); }
+    	void reset() { start_ = Clock_T::now(); }
 
-    /// Returns the elapsed time in seconds since either the construction of the object or the last call to reset()
-    double elapsed() const
-    {
-        using namespace std::chrono;
-        return duration_cast<duration<double, seconds::period>>(Clock_T::now() - start_).count();
-    }
+    	/// Returns the elapsed time in seconds since either the construction of the object or the last call to reset()
+    	double elapsed() const
+    	{
+        	using namespace std::chrono;
+        	return duration_cast<duration<double, seconds::period>>(Clock_T::now() - start_).count();
+    	}
 
-  private:
-    Clock_T::time_point start_;
+  	private:
+    	Clock_T::time_point start_;
 };
+
+void sub_partition(const int, const int, const int, const bool, int*);
 
 int main(int argc, char **argv)
 {
@@ -208,9 +210,9 @@ int main(int argc, char **argv)
     //check if commenly used parameters are set correctly
     //other parameters are tested further below at the respective algo
     if (
-        !check_param(B_VIEW, allowed_b_view) ||
-        !check_param(FILTERS, allowed_filters) ||
-        !check_param(ORDER, allowed_order))
+        	!check_param(B_VIEW, allowed_b_view) ||
+        	!check_param(FILTERS, allowed_filters) ||
+        	!check_param(ORDER, allowed_order))
     {
         std::cerr << "wrong commen parameters in param_file: " << parameter_file << std::endl;
         return LANEDET_ERROR;
@@ -230,6 +232,81 @@ int main(int argc, char **argv)
     //b_view_calibration(&calibration, B_OFFSET_MID, B_OFFSET, B_OFFSET2, B_HEIGHT);
 
 
+	//### Generation random lines ###
+	r_line * candidates;
+	if(ALGO == 5)
+	{
+		Mat img = image;
+		//standard deviation for normal distribution
+    	double sigma;
+    	//mean for left side distribution (closer to middle of picture)
+    	double m_l;
+ 		//mean for right side distribution (closer to middle of picture)
+    	double m_r;
+		int coords_part[NUM_PART + 1];
+		sub_partition(ROI_START * img.rows, img.rows, NUM_PART, true, coords_part);
+    	int height = coords_part[1] - coords_part[0];
+		double height_inv = 1. / height;
+		//maximum amount of pixels, that e_l-s_l respectively -(e_r-s_r) can differ
+    	//this excludes lines with wrong slope
+    	//-> most of left lines are right leaning, most of right lines are left leaning (same as road lanes)
+    	int pixel_diff;
+		int offset_x = 5;
+		double image_split = 0.5;
+
+		if(B_VIEW)
+		{
+			sigma = 70;
+			m_l = 0.55*img.cols*0.75;
+			m_r = img.cols - m_l -1;
+			pixel_diff = 50;
+		}
+		else
+		{
+			sigma = 100;
+			m_l = 0.4 * img.cols;
+			m_r = img.cols - m_l -1;
+			pixel_diff = 100;
+		}
+
+		std::default_random_engine generator;
+		std::normal_distribution<double> dist_left;
+		std::normal_distribution<double> dist_right;
+
+		int s_l, e_l, s_r, e_r;
+		candidates = new r_line[NUM_PART*R_NUM_LINES];
+
+		for (int part = 0; part < NUM_PART; ++part)
+		{    
+			if(B_VIEW)
+			{
+				dist_left = std::normal_distribution<double>(m_l, sigma);
+				dist_right = std::normal_distribution<double>(m_r, sigma);
+			}
+			else
+			{
+    			dist_left = std::normal_distribution<double>(m_l-part*0.1*img.cols, sigma);
+    			dist_right = std::normal_distribution<double>(m_r+part*0.04*img.cols, sigma);
+ 			}
+			for (int l = 0; l < R_NUM_LINES;)
+			{
+				s_l = dist_left(generator);
+            	e_l = dist_left(generator);
+            	s_r = dist_right(generator);
+            	e_r = dist_right(generator);
+            	if((B_VIEW && (e_l-s_l > pixel_diff)) || (B_VIEW &&(e_r - s_r < -pixel_diff)) || (!B_VIEW && (abs(e_l - s_l) > pixel_diff)) || (!B_VIEW && (abs(e_r -s_r) > pixel_diff)) || (!B_VIEW && part!=0 && e_l > s_l) || (!B_VIEW && part!=0 && e_r < s_r) ||s_l-offset_x < 0 || e_l-offset_x < 0 || s_r-offset_x < 0 || e_r-offset_x < 0 || s_l+offset_x > img.cols || e_l+offset_x > img.cols || s_r+offset_x > img.cols || e_r+offset_x > img.cols || s_l > image_split*img.cols || e_l > image_split*img.cols || s_r < (1.-image_split)*img.cols || e_r < (1.-image_split)*img.cols)
+                	continue;
+				candidates[part*R_NUM_LINES+l].s_l = s_l;
+				candidates[part*R_NUM_LINES+l].e_l = e_l;
+ 				candidates[part*R_NUM_LINES+l].s_r = s_r;
+				candidates[part*R_NUM_LINES+l].e_r = e_r;	
+            	//slope of lines like this: x = slope*y + t
+				candidates[part*R_NUM_LINES+l].slope_l = height_inv * (e_l - s_l);
+				candidates[part*R_NUM_LINES+l].slope_r = height_inv * (e_r - s_r);
+				++l;
+			}
+		}
+	}
     cvtColor(image.clone(), clone, COLOR_BGR2GRAY);
 
     Timer time_measurement;
@@ -240,13 +317,13 @@ int main(int argc, char **argv)
         //In the end, both road lanes should be parallel in the Birds Eye View
         //Use b_view_calibration() once to get these constants
         const Point2f b_p1[4] = {Point2f((0.5 - B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows),
-                                 Point2f((0.5 + B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows),
-                                 Point2f((0.5 + B_OFFSET_MID + B_OFFSET) * image.cols, image.rows),
-                                 Point2f((0.5 - B_OFFSET_MID - B_OFFSET) * image.cols, image.rows)};
+            Point2f((0.5 + B_OFFSET_MID) * image.cols, B_HEIGHT * image.rows),
+            Point2f((0.5 + B_OFFSET_MID + B_OFFSET) * image.cols, image.rows),
+            Point2f((0.5 - B_OFFSET_MID - B_OFFSET) * image.cols, image.rows)};
         const Point2f b_p2[4] = {Point2f((0.5 - B_OFFSET_MID - B_OFFSET2) * image.cols, 0),
-                                 Point2f((0.5 + B_OFFSET_MID + B_OFFSET2) * image.cols, 0),
-                                 Point2f((0.5 + B_OFFSET_MID + B_OFFSET2) * image.cols, image.rows),
-                                 Point2f((0.5 - B_OFFSET_MID - B_OFFSET2) * image.cols, image.rows)};
+            Point2f((0.5 + B_OFFSET_MID + B_OFFSET2) * image.cols, 0),
+            Point2f((0.5 + B_OFFSET_MID + B_OFFSET2) * image.cols, image.rows),
+            Point2f((0.5 - B_OFFSET_MID - B_OFFSET2) * image.cols, image.rows)};
         b_mat = getPerspectiveTransform(b_p1, b_p2);
         b_inv_mat = getPerspectiveTransform(b_p2, b_p1);
         warpPerspective(image, image, b_mat, Size(image.cols, image.rows));
@@ -297,8 +374,8 @@ int main(int argc, char **argv)
     else if (ALGO == 2)
     {
         if (
-            !check_param(NUM_PART, allowed_num_part) ||
-            !check_param(NUM_LINES, allowed_num_lines))
+            	!check_param(NUM_PART, allowed_num_part) ||
+            	!check_param(NUM_LINES, allowed_num_lines))
         {
             std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             store_void_result(image, result_dir, output_file);
@@ -318,8 +395,8 @@ int main(int argc, char **argv)
     else if (ALGO == 3)
     {
         if (
-            !check_param(W_NUM_WINDOWS, allowed_w_num_windows) ||
-            !check_param(W_WIDTH, allowed_w_width))
+            	!check_param(W_NUM_WINDOWS, allowed_w_num_windows) ||
+            	!check_param(W_WIDTH, allowed_w_width))
         {
             std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             return LANEDET_ERROR;
@@ -356,20 +433,22 @@ int main(int argc, char **argv)
     else if (ALGO == 5)
     {
         if (
-            !check_param(R_NUM_LINES, allowed_r_num_lines) ||
-            !check_param(NUM_PART, allowed_num_part))
+            	!check_param(R_NUM_LINES, allowed_r_num_lines) ||
+            	!check_param(NUM_PART, allowed_num_part))
         {
             std::cerr << "wrong parameters in algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
-            return LANEDET_ERROR;
+            delete[] candidates;
+			return LANEDET_ERROR;
         }
 
-        code = random_search(image, R_NUM_LINES, ROI_START, NUM_PART, B_VIEW, left_points, right_points);
-
+        code = random_search(image, R_NUM_LINES, ROI_START, NUM_PART, B_VIEW, left_points, right_points, candidates);
+		
+		delete[] candidates;
         if (code != LANEDET_SUCCESS)
         {
             std::cout << "something went wrong in Algo " << ALGO << ", and param_file: " << parameter_file << std::endl;
             store_void_result(image, result_dir, output_file);
-            return code;
+			return code;
         }
     }
     else
@@ -396,6 +475,7 @@ int main(int argc, char **argv)
     time_file.close();
     std::cout << "time in sec: " << time_final << std::endl;
 
+
     if (B_VIEW)
     {
 #ifndef NDEBUG
@@ -416,5 +496,5 @@ int main(int argc, char **argv)
             return code;
     }
     std::cout << clone.channels() << std::endl;
-    return LANEDET_SUCCESS;
+	return LANEDET_SUCCESS;
 }

@@ -9,59 +9,19 @@ int pair_conversion(std::vector<Point2f> &, std::vector<Point2f> &);
 
 
 
-struct r_line{
-	int s_l;
-	int e_l;
-	double slope_l;
-	int s_r;
-	int e_r;
-	double slope_r;
-};
 
 
-int random_search(Mat &img, const int num_lines, const double roi, const int num_part, const bool b_view, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points)
+
+int random_search(Mat &img, const int num_lines, const double roi, const int num_part, const bool b_view, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, r_line * candidates)
 {
     //0% overlap for each half
     const double image_split = 0.5;
     //range to search around current line for white pixels
     const int offset_x = 5;
-    //standard deviation for normal distribution
-    double sigma;
-    //mean for left side distribution (closer to middle of picture)
-    double m_l;
- 	//mean for right side distribution (closer to middle of picture)
-    double m_r;
     
-	//maximum amount of pixels, that e_l-s_l respectively -(e_r-s_r) can differ
-    //this excludes lines with wrong slope
-    //-> most of left lines are right leaning, most of right lines are left leaning (same as road lanes)
-    int pixel_diff;
-	
-	if(b_view)
-	{
-		sigma = 70;
-		m_l = 0.55*img.cols*0.75;
-		m_r = img.cols - m_l -1;
-		pixel_diff = 50;
-	}
-	else
-	{
-		sigma = 100;
-		m_l = 0.4 * img.cols;
-		m_r = img.cols - m_l -1;
-		pixel_diff = 100;
-	}
-	
-	std::default_random_engine generator;
-	std::normal_distribution<double> dist_left;
-	std::normal_distribution<double> dist_right;
-	
-
    //coordinates of partition borders
     int coords_part[num_part + 1];
     sub_partition(roi * img.rows, img.rows, num_part, true, coords_part);
-    //[start/end] [left/right] x values of points
-    int s_l, e_l, s_r, e_r;
     //store temporarily the best x-[start/end]-[left/right]-points
     int s_l_best = 0, e_l_best = 0, s_r_best = 0, e_r_best = 0;
     //score of line quality (sum of white pixels along the current line)
@@ -85,38 +45,7 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     height_inv = 1. / height;
     assert(height_inv >= 0.);
 
-	r_line * candidates = new r_line[num_part*num_lines];
 
-	for (int part = 0; part < num_part; ++part)
-	{    
-		if(b_view)
-		{
-			dist_left = std::normal_distribution<double>(m_l, sigma);
-			dist_right = std::normal_distribution<double>(m_r, sigma);
-		}
-		else
-		{
-    		dist_left = std::normal_distribution<double>(m_l-part*0.1*img.cols, sigma);
-    		dist_right = std::normal_distribution<double>(m_r+part*0.04*img.cols, sigma);
- 		}
-		for (int l = 0; l < num_lines;)
-		{
-			s_l = dist_left(generator);
-            e_l = dist_left(generator);
-            s_r = dist_right(generator);
-            e_r = dist_right(generator);
-            if((b_view && (e_l-s_l > pixel_diff)) || (b_view &&(e_r - s_r < -pixel_diff)) || (!b_view && (abs(e_l - s_l) > pixel_diff)) || (!b_view && (abs(e_r -s_r) > pixel_diff)) || (!b_view && part!=0 && e_l > s_l) || (!b_view && part!=0 && e_r < s_r) ||s_l-offset_x < 0 || e_l-offset_x < 0 || s_r-offset_x < 0 || e_r-offset_x < 0 || s_l+offset_x > img.cols || e_l+offset_x > img.cols || s_r+offset_x > img.cols || e_r+offset_x > img.cols || s_l > image_split*img.cols || e_l > image_split*img.cols || s_r < (1.-image_split)*img.cols || e_r < (1.-image_split)*img.cols)
-                continue;
-			candidates[part*num_lines+l].s_l = s_l;
-			candidates[part*num_lines+l].e_l = e_l;
- 			candidates[part*num_lines+l].s_r = s_r;
-			candidates[part*num_lines+l].e_r = e_r;	
-            //slope of lines like this: x = slope*y + t
-			candidates[part*num_lines+l].slope_l = height_inv * (e_l - s_l);
-			candidates[part*num_lines+l].slope_r = height_inv * (e_r - s_r);
-			++l;
-		}
-	}
 
 
 
@@ -183,7 +112,6 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
 	
 	if (left_points.size() != num_part * 2u || right_points.size() != num_part * 2u)
     {
-        delete[] candidates;
 		std::cout << "warning in " << __FUNCTION__ << ", line: " << __LINE__ << std::endl;
         return LANEDET_WARNING;
     }
@@ -201,6 +129,5 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     //Compute and return the mean of the two points for each side with same y-coordinate (on partition boundary)
     pair_conversion(left_points, right_points);
 	
-	delete[] candidates;
     return LANEDET_SUCCESS;
 }

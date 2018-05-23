@@ -9,6 +9,17 @@
 
 using namespace cv;
 
+
+struct r_line{
+	int s_l;
+	int e_l;
+	double slope_l;
+	int s_r;
+	int e_r;
+	double slope_r;
+};
+
+
 class Parameter_reader
 {
   private:

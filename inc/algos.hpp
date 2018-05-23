@@ -66,7 +66,7 @@ int hough(Mat &img, std::vector<Point2f> &left_points, std::vector<Point2f> &rig
  * @param right_points Vector returning detected points of right lane ready for fitting
  */
 int random_search(Mat &img, const int num_lines, const double roi, const int num_part, const bool b_view,
-        std::vector<Point2f> &left_points, std::vector<Point2f> &right_points);
+        std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, r_line * candidates);
 
 /**
  * Takes the histogram of the upper half of the image as a startig point for 
