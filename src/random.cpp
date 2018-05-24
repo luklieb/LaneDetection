@@ -46,10 +46,6 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
     assert(height_inv >= 0.);
 
 
-
-
-
-
     //for each partition
 	for (int part = 0; part < num_part; ++part)
     {

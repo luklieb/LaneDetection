@@ -1,0 +1,2 @@
+objdump -S random.o
+gcc -I/home/pi/lanedet/inc -isystem /home/pi/libs/opencv-3.1.1-optimized-pi2/include -isystem /home/pi/libs/opencv-3.1.1-optimized-pi2/include/opencv  -fopenmp -std=c++11 -O3 -mcpu=cortex-a7  -mfpu=neon-vfpv4 -ftree-vectorize -mfloat-abi=hard -g -fverbose-asm -Wa,-adhln ../src/random.cpp -c > assembly
