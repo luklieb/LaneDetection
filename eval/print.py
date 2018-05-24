@@ -684,23 +684,23 @@ def main():
 
     figure = getBestBirdView(ranges, None)
     plotBirdView(figure)
-
+    '''
     bird, nonbird = getTimesForRandom(ranges, None)
     print("times b on: ", bird, ", times b off: ", nonbird )
-    noLineGen = (0.01, 0.01, 0.01)
+    noLineGen = (0.1620, 0.0920, 0.0366)
     plotRandomTime((bird, nonbird, noLineGen))
     #TODO add manually tuple (slow, mean, fast) of no line generation (and of neon+parallel version)
-
+    '''
     getNumFiles(ranges)
     print(ranges)
-    '''    
+    
     times = getTimePerAlgo(ranges)
     print(times)
     plotTimes(times, "Average Time per Algo")
     #ratios = getRatioExitCodesPerAlgo(ranges)
     #plotRatios(ratios)
     #print(ratios)
-    ''' 
+    
     figure = getAverageFiguresPerAlgo(ranges)
     print(figure)
     plotAverageFigures(figure, "Average Figures For All Images")
