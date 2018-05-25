@@ -8,10 +8,6 @@ void sub_partition(const int, const int, const int, const bool, int *);
 int pair_conversion(std::vector<Point2f> &, std::vector<Point2f> &);
 
 
-
-
-
-
 int random_search(Mat &img, const int num_lines, const double roi, const int num_part, const bool b_view, std::vector<Point2f> &left_points, std::vector<Point2f> &right_points, r_line * candidates)
 {
     //0% overlap for each half
@@ -37,8 +33,10 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
 
 	uchar* img_data = img.data;
 
-//	uint8x8_t compare1 = vcreate_u8(0x0101010101010101);
-//	uint8x16_t compare = vcombine_u8(compare1, compare1);
+	const uint8x8_t compare1 = vcreate_u8(0x0101010101010101);
+	const uint8x16_t mask = vcombine_u8(compare1, compare1);
+	uint8x16_t l_vec, r_vec, l_masked, r_masked;
+	uint8_t l_result, r_result;
 
     //height of current partition
     height = (coords_part[1] - coords_part[0]);
@@ -63,8 +61,7 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
             {
                 int x_l_curr = y * candidates[part*num_lines+l].slope_l + candidates[part*num_lines+l].s_l;
                 int x_r_curr = y * candidates[part*num_lines+l].slope_r + candidates[part*num_lines+l].s_r;
-
-
+				/*
                 for (int x_offset = -offset_x; x_offset <= (int)offset_x; ++x_offset)
                 {
                     if (img.at<uchar>(y + coords_part[part], x_l_curr + x_offset) >= 250)
@@ -76,7 +73,14 @@ int random_search(Mat &img, const int num_lines, const double roi, const int num
 						++score_r;
                 	}
 				}
-
+				*/
+				l_vec = vld1q_u8(img_data + (y+coords_part[part])*img.cols + x_l_curr-8);
+				r_vec = vld1q_u8(img_data + (y+coords_part[part])*img.cols + x_r_curr-8);
+				l_masked = vandq_u8(l_vec, mask);
+				r_masked = vandq_u8(r_vec, mask);
+				score_l += vaddvq_u8(l_masked);
+				score_r += vaddvq_u8(r_masked);
+				//std::cout << "score_l: " << score_l << ", score_r: " << score_r << std::endl;
 			
 			}
             //store current configuration for both sides
