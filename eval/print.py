@@ -730,9 +730,10 @@ def plotProfiling2():
             [1, 4]]
     names = ["Line creation", "Bird View", "Canny F.", "Sobel F.", "Row F.", "Color F.", "Multi Filter", "Part. Hough", "ALM", "Sliding Windows", "Fixed Windows", "Random Lines"]
     x = np.arange(len(data))
+    colors = ['tab:brown', 'tab:pink']
     for ind in range(2):
         print([x[ind] for x in data])
-        plt.bar(x+(-1+ind)*0.1, [x[ind] for x in data], width=0.1)
+        plt.bar(x+(-1+ind)*0.1, [x[ind] for x in data], width=0.1, color=colors[ind])
     plt.ylabel("Time for each part [ms]")
     plt.xlabel("Parts of the program")
     plt.xticks(x, names, rotation=45, horizontalalignment='right')
