@@ -135,7 +135,8 @@ if __name__ == '__main__':
         print("Error, your directory {} with the results files is not empty.".format(
             resultsDirName))
         print("Do you want to delete everything in this directory? [y/n]")
-        answer = input("> ")
+        #answer = input("> ")
+        answer="n"
         if answer == "y":
             # Delete result files
             for the_file in os.listdir(resultsDirName):
