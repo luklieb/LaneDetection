@@ -201,6 +201,53 @@ def getBestFiguresPerAlgo(ranges, num2):
     return figures, bestPar, worstPar
 
 
+def getTimeVsF(ranges):
+    algoRange = ranges[4]
+    dictParam = {}
+    dictData = {}
+    times = []
+    # Iterate over the range of one specifc algorithm
+    for curr in algoRange:
+        try:
+            with open(os.path.join(resultsDirName, "time" + str(curr))) as f:
+                sumTimes = 0.
+                count = 0
+                # Compute mean of times for each image
+                for line in f:
+                    sumTimes += float(line)
+                    count += 1
+                # Save mean time for parameter file curr
+                times.append((curr, sumTimes/count))
+        except IOError:
+            print("{} doesn't exists as a time file - no worries, it's \
+            probably because the algorithm created only warnings".format(str(curr)))
+        # Read in the "dataxxx" file as a Panda DataFrame object
+        # IF B_view on or off
+        singleData = pd.read_csv(os.path.join(resultsDirName, "data" + str(curr)), sep=" ", usecols=[0, 1, 2, 3, 4, 5, 6], skiprows=[12])
+        paramData = (pd.read_csv(os.path.join(paramDirName, "param_"+str(curr)+".par"), sep=" ", header=None, index_col=0))
+        #Add DataFrame to a dictionary with the current parameter-file-number curr
+        dictParam[curr] = paramData
+        dictData[curr] = singleData
+    data = pd.concat(dictData)
+    data = data.groupby(level=[0]).mean()
+    # Transpose parameter file, remove unneseccary top level
+    param = pd.concat(dictParam).unstack(level=[0])
+    param.columns = param.columns.droplevel(None)
+    # Append values from parameterfile
+    param = pd.concat([data, param], axis=1)
+    for t in times:
+        param.at[t[0], "time"] = t[1]
+    #might break, if fps is too high, then you have to decrease the upper limit of arange()
+    timePoints = (1/np.arange(5,30)).tolist()
+    maxF = []
+    params = []
+    for t in timePoints:
+        tmp = param[param.time <= t].sort_values('#MaxF', ascending=False).head(1)
+        maxF.append(tmp["#MaxF"].values.tolist()[0])
+        params.append(tmp.index.tolist())
+    return [timePoints, maxF, params]
+    
+
 def getTimesForRandom(ranges, num2):
     algoRange = ranges[4]
     dictParam = {}
@@ -660,6 +707,40 @@ def plotRandomTime(figures):
     #plt.suptitle("Speed in sec of top first percentile")
     plt.show()
 
+def plotTimeVsF(data):
+    fps = (1/np.array(data[0])).tolist()
+    plt.plot(fps, data[1])
+    plt.ylabel("Max. F-measure of Random Lines [%]")
+    plt.xlabel("Frames per second")
+    plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
+    plt.show()
+
+def plotProfiling2():
+    data = [[1, 3],
+            [66, 66],
+            [37, 37],
+            [56, 56],
+            [20, 20],
+            [37, 37],
+            [8 ,17],
+            [54, 81],
+            [55, 82],
+            [1, 2],
+            [1, 1],
+            [1, 4]]
+    names = ["Line creation", "Bird View", "Canny F.", "Sobel F.", "Row F.", "Color F.", "Multi Filter", "Part. Hough", "ALM", "Sliding Windows", "Fixed Windows", "Random Lines"]
+    x = np.arange(len(data))
+    colors = ['tab:brown', 'tab:pink']
+    for ind in range(2):
+        print([x[ind] for x in data])
+        plt.bar(x+(-1+ind)*0.1, [x[ind] for x in data], width=0.1, color=colors[ind])
+    plt.ylabel("Time for each part [ms]")
+    plt.xlabel("Parts of the program")
+    plt.xticks(x, names, rotation=45, horizontalalignment='right')
+    plt.yscale('log')
+    plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
+    plt.legend(("Min.", "Max."))
+    plt.show()
 
 def main():
     # Number of combinations per algorithm
@@ -677,6 +758,7 @@ def main():
 
 
     ##################################### start plots ########################################
+    plotProfiling2()
     '''
     nb, b, nbp, bp = getBestFiguresForRandom(ranges, None)    
     print("best configs b view off: ", nbp, "best configs b view on: ", bp)
@@ -684,13 +766,19 @@ def main():
 
     figure = getBestBirdView(ranges, None)
     plotBirdView(figure)
-    '''
+    
+    data = getTimeVsF(ranges)
+    print((1/np.array(data[0])).tolist())
+    print(data[1])
+    print(data[2])
+    plotTimeVsF(data)
+    
     bird, nonbird = getTimesForRandom(ranges, None)
     print("times b on: ", bird, ", times b off: ", nonbird )
     noLineGen = (0.1620, 0.0920, 0.0366)
     plotRandomTime((bird, nonbird, noLineGen))
     #TODO add manually tuple (slow, mean, fast) of no line generation (and of neon+parallel version)
-    '''
+    
     getNumFiles(ranges)
     print(ranges)
     
