@@ -123,30 +123,7 @@ void multi_filter(Mat &image, std::vector<int> algos, int ca_thres, int kernel, 
     }
 }
 
-void row_filter(Mat &image, const int thres, const int tau)
-{
-    //convert input image to gray (single channel, 8bit)
-    cvtColor(image, image, COLOR_BGR2GRAY);
-    //create copy of input image
-    Mat cpy = image.clone();
-    uchar x_curr, x_m_t, x_p_t;
-    for (int y = 0; y < cpy.rows; ++y)
-    {
-        for (int x = 0; x < cpy.cols; ++x)
-        {
-            //current pixel value at (y,x)
-            x_curr = cpy.at<uchar>(y, x);
-            //avoid boundary layers
-            //get pixel value from tau offset
-            x_m_t = x - tau < 0 ? 0 : cpy.at<uchar>(y, x - tau);
-            x_p_t = x + tau > cpy.cols ? cpy.cols : cpy.at<uchar>(y, x + tau);
-            //avoid overflow of 8 bit type
-            //compute new value for pixel from offset values
-            image.at<uchar>(y, x) = saturate_cast<uchar>(2 * x_curr - (x_m_t + x_p_t) - abs(x_m_t - x_p_t));
-        }
-    }
-    threshold(image, image, thres, 255, THRESH_BINARY);
-}
+
 
 //deprecated
 void sobel_dir_thres(Mat &image, const int thres_1, const int thres_2)
