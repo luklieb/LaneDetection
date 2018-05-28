@@ -158,19 +158,19 @@ if __name__ == '__main__':
     # Get a list with the names of all pngs used to detect lanes in
     inputPngs = getPngs(inputDirName)
     # Get a list with all parameter file names
-    paramFiles = getParameterFiles(paramDirName, 2520, 3479)
+    paramFiles = getParameterFiles(paramDirName, 3269, 3269)
     for pf in paramFiles:
         print("#################### eval: current paramFile {} #######################".format(pf))
         suffix = getSuffix(pf)
         # Call for all images the binary for one specific parameter file
         for png in inputPngs:
             exitCode = callBinary(png, pf)
-            storeExitcodes(exitCode, os.path.abspath(
-                os.path.join(resultsDirName, "exit"+suffix)))
+            #storeExitcodes(exitCode, os.path.abspath(
+            #    os.path.join(resultsDirName, "exit"+suffix)))
         # => output images of binary now exist in directory tmpDirName
         # Call fct main() evaluateRoad.py on each of output images in tmpDirName
-        er.main(os.path.abspath(tmpDirName), os.path.abspath(imagesDirName),
-                os.path.abspath(os.path.join(resultsDirName, "data"+suffix)), False)
+        #er.main(os.path.abspath(tmpDirName), os.path.abspath(imagesDirName),
+        #        os.path.abspath(os.path.join(resultsDirName, "data"+suffix)), False)
         # => one addtional measurement file "data123" in resultDirName
         # Delete all images in tmpDirName
         deleteImages(os.path.abspath(tmpDirName))
