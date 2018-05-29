@@ -201,7 +201,7 @@ def getBestFiguresPerAlgo(ranges, num2):
     return figures, bestPar, worstPar
 
 
-def getTimeVsF(ranges):
+def getTimeVsF(ranges, min_, max_):
     algoRange = ranges[4]
     dictParam = {}
     dictData = {}
@@ -238,7 +238,7 @@ def getTimeVsF(ranges):
     for t in times:
         param.at[t[0], "time"] = t[1]
     #might break, if fps is too high, then you have to decrease the upper limit of arange()
-    timePoints = (1/np.arange(5,30)).tolist()
+    timePoints = (1/np.arange(min_, max_)).tolist()
     maxF = []
     params = []
     for t in timePoints:
@@ -709,38 +709,53 @@ def plotRandomTime(figures):
 
 def plotTimeVsF(data):
     fps = (1/np.array(data[0])).tolist()
-    plt.plot(fps, data[1])
+    plt.plot(fps, data[1], color='tab:purple')
     plt.ylabel("Max. F-measure of Random Lines [%]")
     plt.xlabel("Frames per second")
     plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
     plt.show()
 
 def plotProfiling2():
-    data = [[1, 3],
-            [66, 66],
-            [37, 37],
-            [56, 56],
-            [20, 20],
-            [37, 37],
-            [8 ,17],
-            [54, 81],
-            [55, 82],
-            [1, 2],
-            [1, 1],
-            [1, 4]]
-    names = ["Line creation", "Bird View", "Canny F.", "Sobel F.", "Row F.", "Color F.", "Multi Filter", "Part. Hough", "ALM", "Sliding Windows", "Fixed Windows", "Random Lines"]
+    plt.rcParams['lines.linewidth']=1
+    data = [[37, 37, 37],
+            [56, 56, 56],
+            [20, 20, 20],
+            [37, 37, 37],
+            [8,  13, 17],
+            [66, 66, 66],
+            [54, 68, 81],
+            [55, 69, 82],
+            [1, 1.5, 2],
+            [1, 1, 1],
+            [5, 13, 21]]
+    names = [ "Canny Filter", "Sobel Filter", "Row Filter", "Color Filter", "Multi Filter overhead", "Bird View trans.","Part. Hough", "ALM", "Sliding Windows", "Fixed Windows", "Random Lines"]
     x = np.arange(len(data))
     colors = ['tab:brown', 'tab:pink']
-    for ind in range(2):
-        print([x[ind] for x in data])
-        plt.bar(x+(-1+ind)*0.1, [x[ind] for x in data], width=0.1, color=colors[ind])
+    plt.bar(x, [d[1] for d in data], yerr = [ [d[1] - d[0] for d in data], [d[2]-d[1] for d in data]], width=0.5, color=colors[1], capsize=3)
     plt.ylabel("Time for each part [ms]")
     plt.xlabel("Parts of the program")
     plt.xticks(x, names, rotation=45, horizontalalignment='right')
     plt.yscale('log')
     plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
-    plt.legend(("Min.", "Max."))
     plt.show()
+    data = [[20, 20, 20],
+            [7, 7, 7],
+            [5, 13, 21],
+            [4, 8, 12],
+            [2, 3.5, 5]]
+    names = [ "Row Filter", "Row Filter \n NEON vectorized", "Random Lines", "Random Lines \n w/o line creation", "Random Lines \n w/o line creation \n NEON vectorized"]
+    x = np.arange(len(data))
+    plt.clf()
+    plt.axvline(x=1.5,color="xkcd:grey")
+    plt.bar(x, [d[1] for d in data], yerr = [ [d[1] - d[0] for d in data], [d[2]-d[1] for d in data]], width=0.5, color=colors[1], capsize=3)
+    plt.ylabel("Time for each part [ms]")
+    plt.xlabel("Parts of the program")
+    plt.xticks(x, names, rotation=45, horizontalalignment='right')
+    plt.yscale('log')
+    plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
+    plt.show()
+
+
 
 def main():
     # Number of combinations per algorithm
@@ -758,6 +773,7 @@ def main():
 
 
     ##################################### start plots ########################################
+    
     plotProfiling2()
     '''
     nb, b, nbp, bp = getBestFiguresForRandom(ranges, None)    
@@ -767,12 +783,13 @@ def main():
     figure = getBestBirdView(ranges, None)
     plotBirdView(figure)
     
-    data = getTimeVsF(ranges)
+
+    data = getTimeVsF(ranges, 1, 55)
     print((1/np.array(data[0])).tolist())
     print(data[1])
     print(data[2])
     plotTimeVsF(data)
-    
+
     bird, nonbird = getTimesForRandom(ranges, None)
     print("times b on: ", bird, ", times b off: ", nonbird )
     noLineGen = (0.1620, 0.0920, 0.0366)
@@ -808,8 +825,6 @@ def main():
     figure = getBestFiltersPerAlgo(ranges)
     plotBestFilter(figure)
 
-
-    #plotProfiling()
     '''
 
 
