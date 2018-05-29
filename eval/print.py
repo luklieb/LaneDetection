@@ -742,8 +742,9 @@ def plotProfiling2():
             [55, 69, 82],
             [1, 1.5, 2],
             [1, 1, 1],
-            [5, 13, 21]]
-    names = [ "Canny Filter", "Sobel Filter", "Row Filter", "Color Filter", "Multi Filter overhead", "Bird View trans.","Part. Hough", "ALM", "Sliding Windows", "Fixed Windows", "Random Lines"]
+            [5, 13, 21],
+            [0.11, 0.14, 0.17]]
+    names = [ "Canny Filter", "Sobel Filter", "Row Filter", "Color Filter", "Multi Filter overhead", "Bird View trans.","Part. Hough", "ALM", "Sliding Windows", "Fixed Windows", "Random Lines", "Fitting"]
     x = np.arange(len(data))
     colors = ['tab:brown', 'tab:pink']
     plt.bar(x, [d[1] for d in data], yerr = [ [d[1] - d[0] for d in data], [d[2]-d[1] for d in data]], width=0.5, color=colors[1], capsize=3)
@@ -788,9 +789,9 @@ def main():
 
 
     ##################################### start plots ########################################
-    '''
-    plotProfiling2()
     
+    plotProfiling2()
+    '''
     nb, b, nbp, bp = getBestFiguresForRandom(ranges, None)    
     print("best configs b view off: ", nbp, "best configs b view on: ", bp)
     plotRandom([[nb,b]], ("Bird View off", "Bird View on"), "F-measure [%]", [80,85], "Top 1 percentile")
@@ -804,7 +805,7 @@ def main():
     print(data[1])
     print(data[2])
     plotTimeVsF(data)
-    '''
+    
     #bird, nonbird = getTimesForRandom(ranges, None)
     #print("times b on: ", bird, ", times b off: ", nonbird )
     bird = (0.1884, 0.1612, 0.1341)
@@ -814,7 +815,7 @@ def main():
     rowNEON = (0.1229, 0.0847, 0.0467)
     plotRandomTime((bird, nonbird, noLineGen, randomNEON, rowNEON))
     #TODO add manually tuple (slow, mean, fast) of no line generation (and of neon+parallel version)
-    '''
+    
     getNumFiles(ranges)
     print(ranges)
 
