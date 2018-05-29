@@ -101,11 +101,16 @@ def getTimePerAlgo(ranges, num=1):
                 print("{} doesn't exists as a time file - no worries, it's \
                 probably because the algorithm created only warnings".format(str(curr)))
         times = sorted(times, key=itemgetter(1))
+        #print("times:", times)
+        stdv=np.std(np.array([v for _, v in times]), axis = 0, ddof=1)
+        print("stdv: ", stdv)
         avgT = sum(v for _, v in times)/len(times)
         # only save num time measurements
-        minT = times[:1+num-1]
-        maxT = times[-1-num+1:]
-        allTimes.append(( [(0,avgT)], sorted(minT, key=itemgetter(0)), sorted(maxT, key=itemgetter(0))))
+        #minT = times[:1+num-1]
+        #maxT = times[-1-num+1:]
+        #print("minT: ", minT)
+        #allTimes.append(( [(0,avgT)], sorted(minT, key=itemgetter(0)), sorted(maxT, key=itemgetter(0))))
+        allTimes.append(( [(0,avgT)],  [(0,avgT-stdv)], [(0,avgT+stdv)] ))
     return allTimes
 
 
@@ -194,9 +199,12 @@ def getBestFiguresPerAlgo(ranges, num2):
         mean = meanPerParBest.mean()
         #print(meanPerParBest.tail(1).values.tolist()[0])
         #print(mean.values.tolist())
-        best = meanPerParBest.apply(lambda x: my_sorted(x,1))
-        small = meanPerParBestCopy.apply(lambda x: my_sorted_reverse(x,1))
-        figures.append([best.values[0] ,mean.values.tolist(), small.values[0]])
+        #best = meanPerParBest.apply(lambda x: my_sorted(x,1))
+        #small = meanPerParBestCopy.apply(lambda x: my_sorted_reverse(x,1))
+        stdv = meanPerParBest.std()
+        print("mean: ", mean.values)
+        print("std: ", stdv.values)
+        figures.append([(mean.values + stdv.values).tolist(), mean.values.tolist(), (mean.values - stdv.values).tolist()])
         #figures.append(meanPerParBest.tail(1).values.tolist()[0])
     return figures, bestPar, worstPar
 
@@ -298,12 +306,14 @@ def getTimesForRandom(ranges, num2):
     bird.sort_values('time', inplace=True, ascending=True)
     nonBird.sort_values('time', inplace=True, ascending=True)
     birdmean = bird.mean()["time"]
-    birdslow = bird.tail(1)["time"].values[0]
-    birdfast = bird.head(1)["time"].values[0]
+    stdvBird = bird.std()["time"]
+    #birdslow = bird.tail(1)["time"].values[0]
+    #birdfast = bird.head(1)["time"].values[0]
     nonBirdmean = nonBird.mean().values.tolist()[-1]
-    nonBirdslow = nonBird.tail(1).values.tolist()[0][-1]
-    nonBirdfast = nonBird.head(1).values.tolist()[0][-1]
-    return (birdslow, birdmean, birdfast), (nonBirdslow, nonBirdmean, nonBirdfast)
+    stdvNonBird = nonBird.std()["time"]
+    #nonBirdslow = nonBird.tail(1).values.tolist()[0][-1]
+    #nonBirdfast = nonBird.head(1).values.tolist()[0][-1]
+    return (birdmean+stdvBird, birdmean, birdmean-stdvBird), (nonBirdmean + stdvNonBird, nonBirdmean, nonBirdmean-stdvNonBird)
 
 def getBestFiguresForRandom(ranges, num2):
     algoRange = ranges[4]
@@ -375,9 +385,14 @@ def getAverageFiguresPerAlgo(ranges):
         #key="REC_wp"
         #m2.sort_values(key, inplace=True, ascending=True)
         #print("largest ", key, ": ",  m2.head(1)[key].values)
-        largest = mean2.apply(lambda x : my_sorted(x,1)).values[0]
-        smallest = mean2cpy.apply(lambda x : my_sorted_reverse(x,1)).values[0]
-        figures.append([largest, mean.values.tolist(), smallest])
+        #largest = mean2.apply(lambda x : my_sorted(x,1)).values[0]
+        #smallest = mean2cpy.apply(lambda x : my_sorted_reverse(x,1)).values[0]
+        #print("mean: ", mean.values.tolist())
+        #print("smalles: ", smallest )
+        #print("stdv: ", mean2.std().values.tolist())
+        #print("diff: ", (mean.values-mean2.std().values).tolist())
+        stdv = mean2.std()
+        figures.append([(mean.values + stdv.values).tolist(), mean.values.tolist(), (mean.values - stdv.values).tolist()])
     return figures
 
 
@@ -472,14 +487,15 @@ def getBestBirdView(ranges, num2):
         # Iterate over filter combinations
         for b in b_view:
             # Get best (first in sorted dataFrame) row with respective filter combination
-            largest = final[final.b_view == b].head(1).values.tolist()[0][0:1][0]
-            smallest = final[final.b_view == b].tail(1).values.tolist()[0][0:1][0]
+            #largest = final[final.b_view == b].head(num).head(1).values.tolist()[0][0:1][0]
+            #smallest = final[final.b_view == b].head(num).tail(1).values.tolist()[0][0:1][0]
             average = final[final.b_view == b].head(num).mean().values[0]
-            print("largest:  ", largest)
+            #print("largest:  ", largest)
             print("average:  ", average)
-            print("smallest: ", smallest)
+            stdv = final[final.b_view == b].head(num).std().values[0]
+            #print("smallest: ", smallest)
             # Make a tuple with 3 entries (filter-combination, averaged figures, parameter-file-number)             
-            figuresTmp.append((b, [largest, average, smallest], final[final.b_view == b].head(1).index.values.tolist()))
+            figuresTmp.append((b, [average+stdv, average, average-stdv], final[final.b_view == b].head(1).index.values.tolist()))
         figures.append(figuresTmp)
     return figures
 
@@ -692,17 +708,16 @@ def plotRandom (data, xlabels, ylabel, ylim, title):
 #[ (slowest, average time, fastest)*3 ]
 # Plots the return value from fct getBestBirdView()
 def plotRandomTime(figures):
-    x = np.arange(3)
-    #[[3*slow], [3*average], [3*fast]]
+    x = np.arange(len(figures))
     figure = [ [x[0] for x in figures], [x[1] for x in figures], [x[2] for x in figures],]
     #colors = ["tab:brown", "tab:pink", "tab:gray"]
     plt.rcParams['lines.linewidth']=1
     for ind in range(0, 3):
-        plt.bar(x, figure[1], yerr=[ list(np.array(figure[1])-np.array(figure[2])), list(np.array(figure[0])-np.array(figure[1])) ],width=0.2, color="tab:purple", capsize=3)
-    plt.xticks(x, ("Bird View on", "Bird View off", "Bird View off + \n no line generation"))
+        plt.bar(x, figure[1], yerr=[ list(np.array(figure[1])-np.array(figure[2])), list(np.array(figure[0])-np.array(figure[1])) ],width=0.3, color="tab:purple", capsize=3)
+    plt.xticks(x, ("Bird View on", "Bird View off", "Bird View off +\n no line generation", "Bird View off +\n no line generation +\n vectorized Random Lines", "Bird View off +\n no line generation +\n vectorized Random Lines +\n vectorized Row Filter"),rotation=45, horizontalalignment='right')
     #plt.legend(("Slowest", "Average", "Fastest"))
     plt.ylabel("Time per frame [sec]")
-   #plt.xlabel("Level of optimization")
+    #plt.xlabel("Level of optimization")
     plt.grid(True, 'both', axis="y", linewidth=1, linestyle=':', alpha=0.6)
     #plt.suptitle("Speed in sec of top first percentile")
     plt.show()
@@ -773,13 +788,13 @@ def main():
 
 
     ##################################### start plots ########################################
-    
-    plotProfiling2()
     '''
+    plotProfiling2()
+    
     nb, b, nbp, bp = getBestFiguresForRandom(ranges, None)    
     print("best configs b view off: ", nbp, "best configs b view on: ", bp)
     plotRandom([[nb,b]], ("Bird View off", "Bird View on"), "F-measure [%]", [80,85], "Top 1 percentile")
-
+    
     figure = getBestBirdView(ranges, None)
     plotBirdView(figure)
     
@@ -789,29 +804,30 @@ def main():
     print(data[1])
     print(data[2])
     plotTimeVsF(data)
-
-    bird, nonbird = getTimesForRandom(ranges, None)
-    print("times b on: ", bird, ", times b off: ", nonbird )
-    noLineGen = (0.1620, 0.0920, 0.0366)
-    plotRandomTime((bird, nonbird, noLineGen))
+    '''
+    #bird, nonbird = getTimesForRandom(ranges, None)
+    #print("times b on: ", bird, ", times b off: ", nonbird )
+    bird = (0.1884, 0.1612, 0.1341)
+    nonbird = (0.1771, 0.1373, 0.0975)
+    noLineGen = (0.1248, 0.0920, 0.0593)
+    randomNEON = (0.1321, 0.0940, 0.0559)
+    rowNEON = (0.1229, 0.0847, 0.0467)
+    plotRandomTime((bird, nonbird, noLineGen, randomNEON, rowNEON))
     #TODO add manually tuple (slow, mean, fast) of no line generation (and of neon+parallel version)
-    
+    '''
     getNumFiles(ranges)
     print(ranges)
-    
+
     times = getTimePerAlgo(ranges)
     print(times)
     plotTimes(times, "Average Time per Algo")
     #ratios = getRatioExitCodesPerAlgo(ranges)
     #plotRatios(ratios)
     #print(ratios)
-    
+
     figure = getAverageFiguresPerAlgo(ranges)
     print(figure)
     plotAverageFigures(figure, "Average Figures For All Images")
-    
-    #figure = getAverageFiguresPerAlgoForImage(ranges, 6)
-    #plotAverageFigures(figure, "Average Figures For Image 6")
     
     fig, best, worst = getBestFiguresPerAlgo(ranges, None)
     #print(best)
